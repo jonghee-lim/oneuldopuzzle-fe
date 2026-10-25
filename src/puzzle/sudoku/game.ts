@@ -124,6 +124,12 @@ export function undo(game: SudokuGame): SudokuGame {
   return { ...game, values, notes, history };
 }
 
+/** 같은 문제를 처음부터 다시 풉니다. 넣은 숫자·메모·시간을 모두 비우고 입력 설정(메모·고른 숫자)만 둡니다. */
+export function restart(game: SudokuGame): SudokuGame {
+  const fresh = newGame({ id: game.id, level: game.level, difficulty: game.difficulty, puzzle: game.puzzle, solution: game.solution });
+  return { ...fresh, memoMode: game.memoMode, activeNumber: game.activeNumber };
+}
+
 export function toggleMemo(game: SudokuGame): SudokuGame {
   return { ...game, memoMode: !game.memoMode };
 }

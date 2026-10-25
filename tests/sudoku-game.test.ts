@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { generateSudoku } from "../src/puzzle/sudoku/generator.ts";
 import {
-  digitCounts, erase, isFilledButWrong, newGame, tapCell, tapNumber, toggleMemo, undo, type SudokuGame,
+  digitCounts, erase, isFilledButWrong, newGame, restart, tapCell, tapNumber, tick, toggleMemo, undo, type SudokuGame,
 } from "../src/puzzle/sudoku/game.ts";
 import { PEERS } from "../src/puzzle/sudoku/rules.ts";
 
@@ -75,4 +75,20 @@ test("답대로 다 채우면 완료, 틀리게 다 채우면 알려 준다", ()
   w = tapNumber(tapCell(w, last, "cell-first"), (w.solution[last] % 9) + 1, "cell-first");
   assert.equal(w.completed, false);
   assert.equal(isFilledButWrong(w), true);
+});
+
+test("다시 하기: 넣은 숫자·메모·시간·되돌리기 기록이 비고 같은 문제가 남는다", () => {
+  let g = start();
+  const [a, b] = g.puzzle.map((v, i) => (v ? -1 : i)).filter((i) => i >= 0);
+  g = tapNumber(tapCell(g, a, "cell-first"), 4, "cell-first");
+  g = tapNumber(tapCell(toggleMemo(g), b, "cell-first"), 6, "cell-first");
+  g = tick(g, 30);
+  const r = restart(g);
+  assert.deepEqual(r.values, p.puzzle);
+  assert.equal(r.notes.every((n) => n === 0), true);
+  assert.equal(r.elapsedSeconds, 0);
+  assert.equal(r.history.length, 0);
+  assert.equal(r.selected, null);
+  assert.equal(r.memoMode, true);
+  assert.equal(r.id, g.id);
 });

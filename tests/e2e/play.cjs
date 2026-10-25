@@ -41,6 +41,17 @@ const shots = process.argv[2];
   if (shots) await page.screenshot({ path: `${shots}/3-conflict.png` });
   await page.getByRole("button", { name: "되돌리기" }).tap();
 
+  // 다시 하기: 확인 창을 거쳐 넣은 숫자·메모가 비워진다
+  await cells.nth(empties[2]).tap();
+  await page.getByRole("button", { name: String(game.solution[empties[2]]), exact: true }).tap();
+  await page.getByRole("button", { name: "다시 하기" }).tap();
+  if (shots) await page.screenshot({ path: `${shots}/3b-restart.png` });
+  await page.getByRole("dialog").getByRole("button", { name: "다시 하기" }).tap();
+  await page.getByRole("dialog").waitFor({ state: "detached" });
+  const restarted = await page.evaluate(() => JSON.parse(localStorage.getItem("oneuldopuzzle-v1")).state.game);
+  assert.deepEqual(restarted.values, game.puzzle);
+  assert.equal(restarted.notes.every((n) => n === 0), true);
+
   // 나머지를 답대로 채우기
   for (const i of empties) {
     await cells.nth(i).tap();

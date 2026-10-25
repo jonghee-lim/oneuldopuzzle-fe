@@ -1,8 +1,9 @@
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
+import RestartAltIcon from "@mui/icons-material/RestartAlt";
 import UndoIcon from "@mui/icons-material/Undo";
-import { Box, Button, ButtonBase, Dialog, IconButton, Typography } from "@mui/material";
-import { useEffect, useMemo, type ReactNode } from "react";
+import { Box, Button, ButtonBase, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, Typography } from "@mui/material";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import Page from "../components/layout/Page";
 import PuzzleBoard from "../components/puzzle/PuzzleBoard";
@@ -11,7 +12,7 @@ import NumberPad from "../components/sudoku/NumberPad";
 import SudokuCellContent from "../components/sudoku/SudokuCellContent";
 import { DIFFICULTY_LABEL } from "../puzzle/sudoku/generator";
 import {
-  conflictsOf, digitCounts, erase, formatTime, isFilledButWrong, isGiven, tapCell, tapNumber, tick, toggleMemo, undo,
+  conflictsOf, digitCounts, erase, formatTime, isFilledButWrong, isGiven, restart, tapCell, tapNumber, tick, toggleMemo, undo,
 } from "../puzzle/sudoku/game";
 import { boxOf } from "../puzzle/sudoku/rules";
 import { usePuzzleStore } from "../stores/puzzleStore";
@@ -25,6 +26,7 @@ export default function PlayPage() {
   const settings = usePuzzleStore((s) => s.settings);
   const startLevel = usePuzzleStore((s) => s.startLevel);
   const updateGame = usePuzzleStore((s) => s.updateGame);
+  const [confirmRestart, setConfirmRestart] = useState(false);
 
   // 다 푼 판을 보고 있는 동안에는 새 판으로 바꾸지 않습니다(완성 창에서 '다음 레벨'을 눌러야 넘어감).
   useEffect(() => {
@@ -118,7 +120,10 @@ export default function PlayPage() {
         )}
       </Box>
 
-      <Box sx={{ px: 1.5, display: "flex", justifyContent: "flex-end", gap: 1, pb: 1 }}>
+      <Box sx={{ px: 1.5, display: "flex", gap: 1, pb: 1 }}>
+        {/* 다시 하기는 되돌릴 수 없어 왼쪽에 떨어뜨려 두고 확인 창을 거칩니다. */}
+        <ToolButton label="다시 하기" onClick={() => setConfirmRestart(true)} icon={<RestartAltIcon sx={{ fontSize: 18 }} />} />
+        <Box sx={{ flex: 1 }} />
         <ToolButton label="되돌리기" onClick={() => updateGame(undo)} icon={<UndoIcon sx={{ fontSize: 18 }} />} />
         {/* 메모는 작게 숨겨 둡니다(설계서). 켜면 숫자 패드가 민트색으로 바뀝니다. */}
         <ToolButton
@@ -138,6 +143,32 @@ export default function PlayPage() {
           onErase={() => updateGame(erase)}
         />
       </Box>
+
+      <Dialog
+        open={confirmRestart}
+        onClose={() => setConfirmRestart(false)}
+        aria-labelledby="restart-title"
+        slotProps={{ paper: { sx: { width: "min(360px, calc(100% - 32px))", bgcolor: dessert.cream } } }}
+      >
+        <DialogTitle id="restart-title" sx={{ fontWeight: 700 }}>처음부터 다시 할까요?</DialogTitle>
+        <DialogContent>
+          <Typography sx={{ color: "text.secondary" }}>넣은 숫자와 메모가 모두 지워지고 시간도 0:00으로 돌아갑니다. 문제는 그대로입니다.</Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2.5 }}>
+          <Button onClick={() => setConfirmRestart(false)} sx={{ color: "text.secondary" }}>
+            취소
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => {
+              updateGame(restart);
+              setConfirmRestart(false);
+            }}
+          >
+            다시 하기
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Dialog open={game.completed} slotProps={{ paper: { sx: { width: "min(360px, calc(100% - 32px))", p: 3, textAlign: "center", bgcolor: dessert.cream } } }}>
         <Box sx={{ display: "flex", justifyContent: "center" }}>
