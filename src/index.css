@@ -1,0 +1,15 @@
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  word-break: keep-all;
+  -webkit-tap-highlight-color: transparent;
+  /* 두 번 눌러 확대·당겨서 새로고침을 막아 빠른 연속 터치가 끊기지 않게 합니다. */
+  touch-action: manipulation;
+  overscroll-behavior: none;
+  user-select: none;
+  -webkit-user-select: none;
+}

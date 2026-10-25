@@ -1,0 +1,179 @@
+import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
+import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
+import UndoIcon from "@mui/icons-material/Undo";
+import { Box, Button, ButtonBase, Dialog, IconButton, Typography } from "@mui/material";
+import { useEffect, useMemo, type ReactNode } from "react";
+import { useNavigate } from "react-router-dom";
+import Page from "../components/layout/Page";
+import PuzzleBoard from "../components/puzzle/PuzzleBoard";
+import NumberPad from "../components/sudoku/NumberPad";
+import SudokuCellContent from "../components/sudoku/SudokuCellContent";
+import { DIFFICULTY_LABEL } from "../puzzle/sudoku/generator";
+import {
+  conflictsOf, digitCounts, erase, formatTime, isFilledButWrong, isGiven, tapCell, tapNumber, tick, toggleMemo, undo,
+} from "../puzzle/sudoku/game";
+import { boxOf } from "../puzzle/sudoku/rules";
+import { usePuzzleStore } from "../stores/puzzleStore";
+import { dessert, dessertForLevel } from "../theme/palette";
+import { radius } from "../theme/shape";
+
+export default function PlayPage() {
+  const navigate = useNavigate();
+  const clearedLevel = usePuzzleStore((s) => s.clearedLevel);
+  const game = usePuzzleStore((s) => s.game);
+  const settings = usePuzzleStore((s) => s.settings);
+  const startLevel = usePuzzleStore((s) => s.startLevel);
+  const updateGame = usePuzzleStore((s) => s.updateGame);
+
+  // 다 푼 판을 보고 있는 동안에는 새 판으로 바꾸지 않습니다(완성 창에서 '다음 레벨'을 눌러야 넘어감).
+  useEffect(() => {
+    const current = usePuzzleStore.getState().game;
+    if (!current || (!current.completed && current.level !== clearedLevel + 1)) startLevel(clearedLevel + 1);
+  }, [clearedLevel, startLevel]);
+
+  // 화면을 보고 있을 때만 시간이 갑니다.
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "visible") updateGame((g) => tick(g));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [updateGame]);
+
+  const conflicts = useMemo(() => (game && settings.showConflicts ? conflictsOf(game) : new Set<number>()), [game, settings.showConflicts]);
+  const counts = useMemo(() => (game ? digitCounts(game) : []), [game]);
+
+  if (!game) return null;
+
+  const mode = settings.inputMode;
+  const selected = game.selected;
+  const focusDigit = mode === "number-first" ? game.activeNumber : selected !== null ? game.values[selected] : 0;
+  const wrongFill = isFilledButWrong(game);
+
+  const cellBackground = (index: number) => {
+    if (index === selected) return dessert.strawberryMilk;
+    if (conflicts.has(index)) return dessert.conflictMilk;
+    if (settings.highlightSame && focusDigit && game.values[index] === focusDigit) return "#F9D3DC";
+    if (
+      selected !== null &&
+      (Math.floor(index / 9) === Math.floor(selected / 9) || index % 9 === selected % 9 || boxOf(index) === boxOf(selected))
+    ) {
+      return "#FFF4EC";
+    }
+    return isGiven(game, index) ? "#FFFCF7" : dessert.paper;
+  };
+
+  const goNext = () => {
+    startLevel(game.level + 1);
+  };
+
+  return (
+    <Page>
+      <Box component="header" sx={{ display: "flex", alignItems: "center", px: 1, pt: "calc(env(safe-area-inset-top) + 8px)", pb: 0.5 }}>
+        <IconButton aria-label="처음 화면으로" onClick={() => navigate("/")}>
+          <ArrowBackIosNewIcon fontSize="small" />
+        </IconButton>
+        <Box sx={{ flex: 1, textAlign: "center" }}>
+          <Typography sx={{ fontWeight: 800, fontSize: 18, lineHeight: 1.2 }}>
+            {dessertForLevel(game.level)} 레벨 {game.level}
+          </Typography>
+          <Typography sx={{ fontSize: 12, color: "text.secondary" }}>{DIFFICULTY_LABEL[game.difficulty]}</Typography>
+        </Box>
+        <Typography aria-label="걸린 시간" sx={{ width: 56, textAlign: "right", pr: 1, fontVariantNumeric: "tabular-nums", color: "text.secondary", fontWeight: 600 }}>
+          {formatTime(game.elapsedSeconds)}
+        </Typography>
+      </Box>
+
+      <Box sx={{ px: 1.5, pt: 1 }}>
+        <PuzzleBoard
+          size={9}
+          label="스도쿠 판"
+          onCellTap={(index) => updateGame((g) => tapCell(g, index, mode))}
+          cellLabel={(index) => {
+            const r = Math.floor(index / 9) + 1;
+            const c = (index % 9) + 1;
+            const v = game.values[index];
+            return `${r}행 ${c}열 ${v ? `${v}${isGiven(game, index) ? " (처음 숫자)" : ""}` : "빈칸"}`;
+          }}
+          thickEdges={(index) => ({ top: Math.floor(index / 9) % 3 === 0, left: (index % 9) % 3 === 0 })}
+          cellColor={cellBackground}
+          renderCell={(index) => (
+            <SudokuCellContent
+              value={game.values[index]}
+              notes={game.notes[index]}
+              given={isGiven(game, index)}
+              conflict={conflicts.has(index) && !isGiven(game, index)}
+            />
+          )}
+        />
+      </Box>
+
+      <Box sx={{ minHeight: 28, px: 2, pt: 1, textAlign: "center" }}>
+        {wrongFill && <Typography sx={{ fontSize: 14, color: dessert.conflict, fontWeight: 600 }}>다 채웠는데 어딘가 틀린 칸이 있어요.</Typography>}
+        {!wrongFill && mode === "number-first" && !game.activeNumber && (
+          <Typography sx={{ fontSize: 13, color: "text.secondary" }}>숫자를 먼저 고른 뒤 칸을 눌러 주세요.</Typography>
+        )}
+      </Box>
+
+      <Box sx={{ px: 1.5, display: "flex", justifyContent: "flex-end", gap: 1, pb: 1 }}>
+        <ToolButton label="되돌리기" onClick={() => updateGame(undo)} icon={<UndoIcon sx={{ fontSize: 18 }} />} />
+        {/* 메모는 작게 숨겨 둡니다(설계서). 켜면 숫자 패드가 민트색으로 바뀝니다. */}
+        <ToolButton
+          label={game.memoMode ? "메모 켜짐" : "메모"}
+          active={game.memoMode}
+          onClick={() => updateGame(toggleMemo)}
+          icon={<EditOutlinedIcon sx={{ fontSize: 18 }} />}
+        />
+      </Box>
+
+      <Box sx={{ px: 1.5, mt: "auto" }}>
+        <NumberPad
+          counts={counts}
+          memoMode={game.memoMode}
+          activeNumber={mode === "number-first" ? game.activeNumber : null}
+          onNumber={(digit) => updateGame((g) => tapNumber(g, digit, mode))}
+          onErase={() => updateGame(erase)}
+        />
+      </Box>
+
+      <Dialog open={game.completed} slotProps={{ paper: { sx: { width: "min(360px, calc(100% - 32px))", p: 3, textAlign: "center", bgcolor: dessert.cream } } }}>
+        <Typography sx={{ fontSize: 64, lineHeight: 1.1 }} aria-hidden>
+          {dessertForLevel(game.level)}
+        </Typography>
+        <Typography component="h2" sx={{ fontSize: 22, fontWeight: 800, mt: 1 }}>
+          레벨 {game.level} 완성!
+        </Typography>
+        <Typography sx={{ color: "text.secondary", mt: 0.5 }}>걸린 시간 {formatTime(game.elapsedSeconds)}</Typography>
+        <Button variant="contained" size="large" fullWidth onClick={goNext} sx={{ mt: 3, height: 52 }}>
+          다음 레벨
+        </Button>
+        <Button fullWidth onClick={() => { goNext(); navigate("/"); }} sx={{ mt: 1, color: "text.secondary" }}>
+          처음 화면
+        </Button>
+      </Dialog>
+    </Page>
+  );
+}
+
+function ToolButton({ label, icon, onClick, active = false }: { label: string; icon: ReactNode; onClick: () => void; active?: boolean }) {
+  return (
+    <ButtonBase
+      onClick={onClick}
+      disableRipple
+      aria-pressed={active}
+      sx={{
+        gap: 0.5,
+        px: 1.25,
+        height: 32,
+        borderRadius: radius.pill,
+        fontSize: 13,
+        fontWeight: 600,
+        color: active ? "#FFFFFF" : dessert.cocoaSoft,
+        bgcolor: active ? dessert.mintDeep : "transparent",
+        border: `1px solid ${active ? dessert.mintDeep : dessert.line}`,
+      }}
+    >
+      {icon}
+      <span className="tool-label">{label}</span>
+    </ButtonBase>
+  );
+}
