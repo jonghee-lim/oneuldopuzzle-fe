@@ -1,10 +1,13 @@
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
-import { Box, Button, IconButton, Typography } from "@mui/material";
+import ChevronRightIcon from "@mui/icons-material/ChevronRight";
+import { Box, Button, ButtonBase, IconButton, ToggleButton, ToggleButtonGroup, Typography } from "@mui/material";
 import { Link, useNavigate } from "react-router-dom";
 import DessertArt from "../components/dessert/DessertArt";
 import AppHeader from "../components/layout/AppHeader";
 import Page from "../components/layout/Page";
-import { DIFFICULTY_LABEL, difficultyForLevel } from "../puzzle/sudoku/generator";
+import { ESCAPES } from "../puzzle/escape/puzzles";
+import { NONOGRAMS } from "../puzzle/nonogram/puzzles";
+import { DIFFICULTY_LABEL, difficultyForLevel, type SudokuDifficulty } from "../puzzle/sudoku/generator";
 import { formatTime } from "../puzzle/sudoku/game";
 import { usePuzzleStore } from "../stores/puzzleStore";
 import { dessert, dessertForLevel } from "../theme/palette";
@@ -14,10 +17,13 @@ export default function HomePage() {
   const navigate = useNavigate();
   const clearedLevel = usePuzzleStore((s) => s.clearedLevel);
   const game = usePuzzleStore((s) => s.game);
+  const chosenDifficulty = usePuzzleStore((s) => s.chosenDifficulty);
+  const chooseDifficulty = usePuzzleStore((s) => s.chooseDifficulty);
   const level = clearedLevel + 1;
+  const difficulty = chosenDifficulty ?? difficultyForLevel(level);
   const today = dessertForLevel(level);
   const next = dessertForLevel(level + 1);
-  const inProgress = game && game.level === level && !game.completed && game.history.length + game.elapsedSeconds > 0;
+  const inProgress = game && game.level === level && game.difficulty === difficulty && !game.completed && game.history.length + game.elapsedSeconds > 0;
 
   return (
     <Page>
@@ -38,9 +44,34 @@ export default function HomePage() {
             <Typography id="level-title" component="h1" sx={{ fontSize: 28, fontWeight: 700, lineHeight: 1.2, letterSpacing: "-0.02em" }}>
               레벨 {level} · {today.name}
             </Typography>
-            <Typography sx={{ mt: 0.75, fontSize: 15, color: "text.secondary" }}>
-              클래식 스도쿠 · {DIFFICULTY_LABEL[difficultyForLevel(level)]}
+            <Typography sx={{ mt: 0.75, fontSize: 15, color: "text.secondary" }}>클래식 스도쿠</Typography>
+            <Typography id="difficulty-label" sx={{ mt: 2, mb: 1, fontSize: 14, fontWeight: 600 }}>
+              난이도
             </Typography>
+            <ToggleButtonGroup
+              exclusive
+              fullWidth
+              value={difficulty}
+              onChange={(_, v: SudokuDifficulty | null) => v && chooseDifficulty(v)}
+              aria-labelledby="difficulty-label"
+            >
+              {(Object.keys(DIFFICULTY_LABEL) as SudokuDifficulty[]).map((d) => (
+                <ToggleButton
+                  key={d}
+                  value={d}
+                  sx={{
+                    height: 44,
+                    px: 0.5,
+                    fontSize: 14,
+                    fontWeight: 700,
+                    whiteSpace: "nowrap",
+                    "&.Mui-selected, &.Mui-selected:hover": { bgcolor: dessert.mint, color: dessert.cocoa },
+                  }}
+                >
+                  {DIFFICULTY_LABEL[d]}
+                </ToggleButton>
+              ))}
+            </ToggleButtonGroup>
             <Button variant="contained" size="large" fullWidth onClick={() => navigate("/play")} sx={{ mt: 2.5, height: 56, fontSize: 18 }}>
               {inProgress ? `이어 하기 · ${formatTime(game.elapsedSeconds)}` : "시작하기"}
             </Button>
@@ -65,7 +96,43 @@ export default function HomePage() {
             </Box>
           </Box>
         </Box>
+        <Box component="section" aria-labelledby="special-title" sx={{ pb: 2 }}>
+          <Typography id="special-title" component="h2" sx={{ fontSize: 18, fontWeight: 700, px: 0.5, pb: 1 }}>
+            스페셜 스테이지 체험
+          </Typography>
+          <Box sx={{ bgcolor: dessert.paper, borderRadius: radius.item, overflow: "hidden" }}>
+            <SpecialRow to="/special/nonogram" title="노노그램" detail={`숫자 힌트로 칸을 칠해 그림 완성 · ${NONOGRAMS.length}단계`} />
+            <Box sx={{ height: "1px", bgcolor: dessert.creamDeep, mx: 2 }} />
+            <SpecialRow to="/special/escape" title="블록 탈출" detail={`블록을 밀어 딸기 블록을 출구로 · ${ESCAPES.length}단계`} />
+          </Box>
+        </Box>
       </Box>
     </Page>
+  );
+}
+
+function SpecialRow({ to, title, detail }: { to: string; title: string; detail: string }) {
+  return (
+    <ButtonBase
+      component={Link}
+      to={to}
+      sx={{
+        width: "100%",
+        minHeight: 64,
+        px: 2,
+        py: 1.5,
+        justifyContent: "space-between",
+        textAlign: "left",
+        gap: 1,
+        "&:active": { bgcolor: dessert.creamDeep },
+        "&.Mui-focusVisible": { outline: `3px solid ${dessert.strawberryDeep}`, outlineOffset: "-3px" },
+      }}
+    >
+      <Box sx={{ minWidth: 0 }}>
+        <Typography sx={{ fontSize: 16, fontWeight: 700 }}>{title}</Typography>
+        <Typography sx={{ fontSize: 13, color: "text.secondary" }}>{detail}</Typography>
+      </Box>
+      <ChevronRightIcon aria-hidden sx={{ color: dessert.cocoaSoft }} />
+    </ButtonBase>
   );
 }

@@ -10,7 +10,7 @@ import PuzzleBoard from "../components/puzzle/PuzzleBoard";
 import DessertArt from "../components/dessert/DessertArt";
 import NumberPad from "../components/sudoku/NumberPad";
 import SudokuCellContent from "../components/sudoku/SudokuCellContent";
-import { DIFFICULTY_LABEL } from "../puzzle/sudoku/generator";
+import { DIFFICULTY_LABEL, difficultyForLevel } from "../puzzle/sudoku/generator";
 import {
   conflictsOf, digitCounts, erase, formatTime, isFilledButWrong, isGiven, restart, tapCell, tapNumber, tick, toggleMemo, undo,
 } from "../puzzle/sudoku/game";
@@ -29,10 +29,13 @@ export default function PlayPage() {
   const [confirmRestart, setConfirmRestart] = useState(false);
 
   // 다 푼 판을 보고 있는 동안에는 새 판으로 바꾸지 않습니다(완성 창에서 '다음 레벨'을 눌러야 넘어감).
+  const chosenDifficulty = usePuzzleStore((s) => s.chosenDifficulty);
   useEffect(() => {
     const current = usePuzzleStore.getState().game;
-    if (!current || (!current.completed && current.level !== clearedLevel + 1)) startLevel(clearedLevel + 1);
-  }, [clearedLevel, startLevel]);
+    const level = clearedLevel + 1;
+    const difficulty = chosenDifficulty ?? difficultyForLevel(level);
+    if (!current || (!current.completed && (current.level !== level || current.difficulty !== difficulty))) startLevel(level);
+  }, [clearedLevel, chosenDifficulty, startLevel]);
 
   // 화면을 보고 있을 때만 시간이 갑니다.
   useEffect(() => {

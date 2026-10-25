@@ -21,17 +21,20 @@ interface PuzzleBoardProps {
   /** 칸 바탕색(고른 칸·강조·색깔 구역 등) */
   cellColor?: (index: number) => string;
   thickEdges?: (index: number) => ThickEdges;
+  /** 칸 위에 얹는 것(블록 탈출의 블록 등). 판과 같은 크기의 층에 그립니다. */
+  overlay?: ReactNode;
 }
 
 const THIN = `1px solid ${dessert.line}`;
 const THICK = `2px solid ${dessert.cocoaSoft}`;
 
-export default function PuzzleBoard({ size, label, renderCell, cellLabel, onCellTap, cellColor, thickEdges }: PuzzleBoardProps) {
+export default function PuzzleBoard({ size, label, renderCell, cellLabel, onCellTap, cellColor, thickEdges, overlay }: PuzzleBoardProps) {
   return (
     <Box
       role="grid"
       aria-label={label}
       sx={{
+        position: "relative",
         display: "grid",
         gridTemplateColumns: `repeat(${size}, minmax(0, 1fr))`,
         width: "100%",
@@ -69,6 +72,7 @@ export default function PuzzleBoard({ size, label, renderCell, cellLabel, onCell
           </ButtonBase>
         );
       })}
+      {overlay}
     </Box>
   );
 }

@@ -104,6 +104,7 @@ export function difficultyForLevel(level: number): SudokuDifficulty {
   return "hard";
 }
 
-export function puzzleForLevel(level: number): SudokuPuzzle {
-  return generateSudoku(`sudoku-level-${level}`, difficultyForLevel(level));
+/** 레벨의 문제. 사용자가 시작 화면에서 난이도를 고르면 그 난이도로 만듭니다(같은 레벨·난이도면 같은 문제). */
+export function puzzleForLevel(level: number, difficulty: SudokuDifficulty = difficultyForLevel(level)): SudokuPuzzle {
+  return generateSudoku(`sudoku-level-${level}`, difficulty);
 }

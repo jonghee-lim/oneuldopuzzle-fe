@@ -16,6 +16,14 @@ const shots = process.argv[2];
   await page.goto(BASE);
   await page.getByRole("heading", { name: "레벨 1" }).waitFor();
   if (shots) await page.screenshot({ path: `${shots}/1-home.png` });
+  // 난이도를 고르면 그 난이도로 문제가 나온다
+  await page.getByRole("button", { name: "어려움", exact: true }).tap();
+  await page.getByRole("button", { name: "시작하기" }).tap();
+  await page.getByText("어려움").first().waitFor();
+  const hard = await page.evaluate(() => JSON.parse(localStorage.getItem("oneuldopuzzle-v1")).state.game);
+  assert.equal(hard.difficulty, "hard");
+  await page.getByRole("button", { name: "처음 화면으로" }).tap();
+  await page.getByRole("button", { name: "쉬움", exact: true }).tap();
   await page.getByRole("button", { name: "시작하기" }).tap();
   await page.getByRole("grid", { name: "스도쿠 판" }).waitFor();
 
