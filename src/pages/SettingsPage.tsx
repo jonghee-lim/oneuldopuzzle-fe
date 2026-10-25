@@ -57,14 +57,14 @@ function Group({ title, children }: { title: string; children: ReactNode }) {
       <Typography component="h2" sx={{ fontSize: 13, fontWeight: 700, color: "text.secondary", px: 0.5, pb: 1 }}>
         {title}
       </Typography>
-      <Box sx={{ bgcolor: dessert.paper, borderRadius: radius.item, border: `1px solid ${dessert.line}` }}>{children}</Box>
+      <Box sx={{ bgcolor: dessert.paper, borderRadius: radius.item }}>{children}</Box>
     </Box>
   );
 }
 
 function Row({ label, checked, onChange, divider = false }: { label: string; checked: boolean; onChange: (v: boolean) => void; divider?: boolean }) {
   return (
-    <Box component="label" sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", minHeight: 52, px: 2, borderTop: divider ? `1px solid ${dessert.line}` : "none" }}>
+    <Box component="label" sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", minHeight: 52, px: 2, borderTop: divider ? `1px solid ${dessert.creamDeep}` : "none" }}>
       <Typography>{label}</Typography>
       <Switch checked={checked} onChange={(e) => onChange(e.target.checked)} slotProps={{ input: { "aria-label": label } }} />
     </Box>

@@ -40,7 +40,6 @@ export default function PuzzleBoard({ size, label, renderCell, cellLabel, onCell
         border: `3px solid ${dessert.cocoaSoft}`,
         borderRadius: radius.item,
         overflow: "hidden",
-        boxShadow: "0 6px 18px rgba(139, 114, 98, 0.12)",
       }}
     >
       {Array.from({ length: size * size }, (_, index) => {
@@ -62,6 +61,7 @@ export default function PuzzleBoard({ size, label, renderCell, cellLabel, onCell
                 borderLeft: col === 0 ? "none" : edges.left ? THICK : THIN,
                 // 오른쪽·아래 선은 다음 칸이 그리므로 겹쳐 굵어지지 않습니다.
                 transition: "background-color 120ms",
+                "&.Mui-focusVisible": { outline: `3px solid ${dessert.strawberryDeep}`, outlineOffset: "-3px", zIndex: 1 },
                 bgcolor: cellColor?.(index),
             }}
           >

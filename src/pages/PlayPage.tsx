@@ -6,6 +6,7 @@ import { useEffect, useMemo, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import Page from "../components/layout/Page";
 import PuzzleBoard from "../components/puzzle/PuzzleBoard";
+import DessertArt from "../components/dessert/DessertArt";
 import NumberPad from "../components/sudoku/NumberPad";
 import SudokuCellContent from "../components/sudoku/SudokuCellContent";
 import { DIFFICULTY_LABEL } from "../puzzle/sudoku/generator";
@@ -52,14 +53,14 @@ export default function PlayPage() {
   const cellBackground = (index: number) => {
     if (index === selected) return dessert.strawberryMilk;
     if (conflicts.has(index)) return dessert.conflictMilk;
-    if (settings.highlightSame && focusDigit && game.values[index] === focusDigit) return "#F9D3DC";
+    if (settings.highlightSame && focusDigit && game.values[index] === focusDigit) return dessert.mint;
     if (
       selected !== null &&
       (Math.floor(index / 9) === Math.floor(selected / 9) || index % 9 === selected % 9 || boxOf(index) === boxOf(selected))
     ) {
-      return "#FFF4EC";
+      return dessert.creamDeep;
     }
-    return isGiven(game, index) ? "#FFFCF7" : dessert.paper;
+    return dessert.paper;
   };
 
   const goNext = () => {
@@ -72,11 +73,14 @@ export default function PlayPage() {
         <IconButton aria-label="처음 화면으로" onClick={() => navigate("/")}>
           <ArrowBackIosNewIcon fontSize="small" />
         </IconButton>
-        <Box sx={{ flex: 1, textAlign: "center" }}>
-          <Typography sx={{ fontWeight: 800, fontSize: 18, lineHeight: 1.2 }}>
-            {dessertForLevel(game.level)} 레벨 {game.level}
-          </Typography>
-          <Typography sx={{ fontSize: 12, color: "text.secondary" }}>{DIFFICULTY_LABEL[game.difficulty]}</Typography>
+        <Box sx={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 1, minWidth: 0 }}>
+          <DessertArt id={dessertForLevel(game.level).id} size={30} />
+          <Box>
+            <Typography component="h1" sx={{ fontWeight: 700, fontSize: 20, lineHeight: 1.2 }}>
+              레벨 {game.level}
+            </Typography>
+            <Typography sx={{ fontSize: 13, color: "text.secondary", lineHeight: 1.3 }}>{DIFFICULTY_LABEL[game.difficulty]}</Typography>
+          </Box>
         </Box>
         <Typography aria-label="걸린 시간" sx={{ width: 56, textAlign: "right", pr: 1, fontVariantNumeric: "tabular-nums", color: "text.secondary", fontWeight: 600 }}>
           {formatTime(game.elapsedSeconds)}
@@ -107,7 +111,7 @@ export default function PlayPage() {
         />
       </Box>
 
-      <Box sx={{ minHeight: 28, px: 2, pt: 1, textAlign: "center" }}>
+      <Box aria-live="polite" sx={{ minHeight: 28, px: 2, pt: 1, textAlign: "center" }}>
         {wrongFill && <Typography sx={{ fontSize: 14, color: dessert.conflict, fontWeight: 600 }}>다 채웠는데 어딘가 틀린 칸이 있어요.</Typography>}
         {!wrongFill && mode === "number-first" && !game.activeNumber && (
           <Typography sx={{ fontSize: 13, color: "text.secondary" }}>숫자를 먼저 고른 뒤 칸을 눌러 주세요.</Typography>
@@ -136,13 +140,15 @@ export default function PlayPage() {
       </Box>
 
       <Dialog open={game.completed} slotProps={{ paper: { sx: { width: "min(360px, calc(100% - 32px))", p: 3, textAlign: "center", bgcolor: dessert.cream } } }}>
-        <Typography sx={{ fontSize: 64, lineHeight: 1.1 }} aria-hidden>
-          {dessertForLevel(game.level)}
-        </Typography>
+        <Box sx={{ display: "flex", justifyContent: "center" }}>
+          <DessertArt id={dessertForLevel(game.level).id} size={112} />
+        </Box>
         <Typography component="h2" sx={{ fontSize: 22, fontWeight: 800, mt: 1 }}>
           레벨 {game.level} 완성!
         </Typography>
-        <Typography sx={{ color: "text.secondary", mt: 0.5 }}>걸린 시간 {formatTime(game.elapsedSeconds)}</Typography>
+        <Typography sx={{ color: "text.secondary", mt: 0.5 }}>
+          걸린 시간 {formatTime(game.elapsedSeconds)}
+        </Typography>
         <Button variant="contained" size="large" fullWidth onClick={goNext} sx={{ mt: 3, height: 52 }}>
           다음 레벨
         </Button>
@@ -163,13 +169,13 @@ function ToolButton({ label, icon, onClick, active = false }: { label: string; i
       sx={{
         gap: 0.5,
         px: 1.25,
-        height: 32,
+        height: 40,
         borderRadius: radius.pill,
-        fontSize: 13,
+        fontSize: 14,
         fontWeight: 600,
         color: active ? "#FFFFFF" : dessert.cocoaSoft,
-        bgcolor: active ? dessert.mintDeep : "transparent",
-        border: `1px solid ${active ? dessert.mintDeep : dessert.line}`,
+        bgcolor: active ? dessert.mintDeep : dessert.creamDeep,
+        "&.Mui-focusVisible": { outline: `3px solid ${dessert.strawberryDeep}`, outlineOffset: "2px" },
       }}
     >
       {icon}

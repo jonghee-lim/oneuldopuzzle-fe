@@ -17,9 +17,10 @@ export default function SudokuCellContent({ value, notes, given, conflict }: Pro
         className="sudoku-value"
         sx={{
           fontSize: "clamp(18px, 6.2vw, 30px)",
-          fontWeight: given ? 800 : 700,
+          fontWeight: given ? 700 : 600,
           lineHeight: 1,
-          color: conflict ? dessert.conflict : given ? dessert.cocoa : dessert.strawberryDeep,
+          // 내가 넣은 숫자는 민트로, 빨강은 겹친 숫자에만 씁니다(분홍이 틀린 숫자처럼 보인다는 의견, 2026-10-25).
+          color: conflict ? dessert.conflict : given ? dessert.cocoa : dessert.mintDeep,
         }}
       >
         {value}
@@ -39,7 +40,7 @@ export default function SudokuCellContent({ value, notes, given, conflict }: Pro
         fontSize: "clamp(8px, 2.4vw, 12px)",
         fontWeight: 600,
         lineHeight: 1,
-        color: dessert.mintDeep,
+        color: dessert.cocoaSoft,
       }}
     >
       {Array.from({ length: 9 }, (_, k) => (

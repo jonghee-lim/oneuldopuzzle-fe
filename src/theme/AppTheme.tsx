@@ -7,7 +7,7 @@ const theme = createTheme({
   shape: standardShape,
   palette: {
     mode: "light",
-    primary: { main: dessert.strawberry, dark: dessert.strawberryDeep, contrastText: "#FFFFFF" },
+    primary: { main: dessert.strawberryDeep, light: dessert.strawberry, contrastText: "#FFFFFF" },
     secondary: { main: dessert.mintDeep, light: dessert.mint },
     background: { default: dessert.cream, paper: dessert.paper },
     text: { primary: dessert.cocoa, secondary: dessert.cocoaSoft },

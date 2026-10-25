@@ -17,11 +17,12 @@ export default function NumberPad({ counts, memoMode, activeNumber, onNumber, on
     height: "clamp(56px, 15vw, 72px)",
     borderRadius: radius.item,
     bgcolor: dessert.paper,
-    border: `1.5px solid ${dessert.line}`,
     flexDirection: "column",
     gap: "2px",
-    boxShadow: "0 2px 0 rgba(139, 114, 98, 0.18)",
-    "&:active": { transform: "translateY(1px)", boxShadow: "none" },
+    transition: "transform 80ms, background-color 120ms",
+    "&:active": { transform: "scale(0.96)" },
+    "&.Mui-focusVisible": { outline: `3px solid ${dessert.strawberryDeep}`, outlineOffset: "2px" },
+    "@media (prefers-reduced-motion: reduce)": { transition: "none", "&:active": { transform: "none" } },
   } as const;
 
   return (
@@ -39,8 +40,7 @@ export default function NumberPad({ counts, memoMode, activeNumber, onNumber, on
             onClick={() => onNumber(digit)}
             sx={{
               ...keySx,
-              bgcolor: active ? dessert.strawberry : memoMode ? dessert.mintMilk : dessert.paper,
-              borderColor: active ? dessert.strawberryDeep : memoMode ? dessert.mint : dessert.line,
+              bgcolor: active ? dessert.strawberryDeep : memoMode ? dessert.mintMilk : dessert.paper,
               opacity: done && !memoMode ? 0.35 : 1,
             }}
           >
@@ -51,20 +51,20 @@ export default function NumberPad({ counts, memoMode, activeNumber, onNumber, on
                 fontSize: memoMode ? "clamp(20px, 6vw, 26px)" : "clamp(26px, 8vw, 34px)",
                 fontWeight: 800,
                 lineHeight: 1,
-                color: active ? "#FFFFFF" : memoMode ? dessert.mintDeep : dessert.cocoa,
+                color: active ? "#FFFFFF" : dessert.cocoa,
               }}
             >
               {digit}
             </Box>
-            <Box component="span" className="pad-left" sx={{ fontSize: 10, lineHeight: 1, color: active ? "#FFFFFF" : dessert.cocoaSoft }}>
+            <Box component="span" className="pad-left" sx={{ fontSize: 12, lineHeight: 1, color: active ? "#FFFFFF" : dessert.cocoaSoft, fontVariantNumeric: "tabular-nums" }}>
               {done ? "완료" : `${9 - counts[digit]}개`}
             </Box>
           </ButtonBase>
         );
       })}
-      <ButtonBase aria-label="지우기" disableRipple onClick={onErase} sx={{ ...keySx, bgcolor: dessert.vanilla }}>
+      <ButtonBase aria-label="지우기" disableRipple onClick={onErase} sx={{ ...keySx, bgcolor: dessert.creamDeep }}>
         <BackspaceOutlinedIcon sx={{ fontSize: 26, color: dessert.cocoaSoft }} />
-        <Box component="span" className="pad-left" sx={{ fontSize: 10, lineHeight: 1, color: dessert.cocoaSoft }}>
+        <Box component="span" className="pad-left" sx={{ fontSize: 12, lineHeight: 1, color: dessert.cocoaSoft }}>
           지우기
         </Box>
       </ButtonBase>

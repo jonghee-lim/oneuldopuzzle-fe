@@ -7,7 +7,8 @@ const BASE = process.env.BASE_URL || "http://localhost:4180";
 const shots = process.argv[2];
 
 (async () => {
-  const browser = await chromium.launch();
+  // CHROME_PATH가 있으면 그 브라우저를 씁니다(설치된 Playwright 브라우저 버전이 다를 때).
+  const browser = await chromium.launch(process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH, args: ["--no-sandbox"] } : {});
   const page = await browser.newPage({ ...devices["iPhone 13"] });
   const errors = [];
   page.on("pageerror", (e) => errors.push(String(e)));

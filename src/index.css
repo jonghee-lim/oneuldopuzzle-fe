@@ -13,3 +13,8 @@ body {
   user-select: none;
   -webkit-user-select: none;
 }
+
+h1,
+h2 {
+  text-wrap: balance;
+}
