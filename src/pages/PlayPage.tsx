@@ -16,18 +16,18 @@ import { findConflicts } from "../puzzle/sudoku/rules";
 import DessertArt from "../components/dessert/DessertArt";
 import NumberPad from "../components/sudoku/NumberPad";
 import SudokuCellContent from "../components/sudoku/SudokuCellContent";
-import { DIFFICULTY_LABEL, difficultyForLevel } from "../puzzle/sudoku/generator";
+import { DIFFICULTY_LABEL } from "../puzzle/sudoku/generator";
 import {
   conflictsOf, deadCells, digitCounts, erase, newlyCompletedCells, formatTime, isFilledButWrong, isGiven, restart, tapCell, tapNumber, tick, toggleMemo, undo, wrongCells,
 } from "../puzzle/sudoku/game";
 import { boxOf } from "../puzzle/sudoku/rules";
-import { usePuzzleStore } from "../stores/puzzleStore";
+import { sudokuNext, usePuzzleStore } from "../stores/puzzleStore";
 import { flash, popIn } from "../theme/motion";
 import { dessert, dessertForLevel } from "../theme/palette";
 
 export default function PlayPage() {
   const navigate = useNavigate();
-  const clearedLevel = usePuzzleStore((s) => s.clearedLevel);
+  const sudokuCleared = usePuzzleStore((s) => s.sudokuCleared);
   const game = usePuzzleStore((s) => s.game);
   const settings = usePuzzleStore((s) => s.settings);
   const startLevel = usePuzzleStore((s) => s.startLevel);
@@ -60,10 +60,9 @@ export default function PlayPage() {
   const chosenDifficulty = usePuzzleStore((s) => s.chosenDifficulty);
   useEffect(() => {
     const current = usePuzzleStore.getState().game;
-    const level = clearedLevel + 1;
-    const difficulty = chosenDifficulty ?? difficultyForLevel(level);
+    const { level, difficulty } = sudokuNext({ sudokuCleared, chosenDifficulty });
     if (!current || (!current.completed && (current.level !== level || current.difficulty !== difficulty))) startLevel(level);
-  }, [clearedLevel, chosenDifficulty, startLevel]);
+  }, [sudokuCleared, chosenDifficulty, startLevel]);
 
   // 화면을 보고 있을 때만 시간이 갑니다.
   useEffect(() => {
@@ -110,7 +109,7 @@ export default function PlayPage() {
   return (
     <Page>
       <Box component="header" sx={{ display: "flex", alignItems: "center", px: 1, pt: "calc(env(safe-area-inset-top) + 8px)", pb: 0.5 }}>
-        <IconButton aria-label="처음 화면으로" onClick={() => navigate("/")}>
+        <IconButton aria-label="스도쿠 화면으로" onClick={() => navigate("/sudoku")}>
           <ArrowBackIosNewIcon fontSize="small" />
         </IconButton>
         <Box sx={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 1, minWidth: 0 }}>
@@ -226,8 +225,8 @@ export default function PlayPage() {
         <Button variant="contained" size="large" fullWidth onClick={goNext} sx={{ mt: 3, height: 52 }}>
           다음 레벨
         </Button>
-        <Button fullWidth onClick={() => { goNext(); navigate("/"); }} sx={{ mt: 1, color: "text.secondary" }}>
-          처음 화면
+        <Button fullWidth onClick={() => { goNext(); navigate("/sudoku"); }} sx={{ mt: 1, color: "text.secondary" }}>
+          스도쿠 화면
         </Button>
       </Dialog>
     </Page>

@@ -34,8 +34,10 @@ export type StatKey = SudokuDifficulty | "zones" | "sliding" | "blocks";
 
 interface PuzzleState {
   /** 깬 가장 높은 레벨(0이면 아직 없음) */
-  clearedLevel: number;
-  bestSeconds: Record<number, number>;
+  /** 난이도마다 따로 이어지는 스도쿠 레벨: 그 난이도에서 깬 마지막 레벨(2026-10-26 사용자 결정) */
+  sudokuCleared: Partial<Record<SudokuDifficulty, number>>;
+  /** 스도쿠 최고 기록(초). 키는 "난이도:레벨" */
+  bestSeconds: Record<string, number>;
   settings: PuzzleSettings;
   game: SudokuGame | null;
   /** 난이도를 바꾸느라 잠시 멈춘 판(난이도마다 하나). 같은 레벨로 돌아오면 이어서 풉니다. */
@@ -88,10 +90,19 @@ function addStat(stats: PuzzleState["stats"], key: StatKey, seconds: number): Pu
   };
 }
 
+/** 난이도를 고른 적이 없으면 쉬움부터 */
+export const DEFAULT_DIFFICULTY: SudokuDifficulty = "easy";
+
+/** 고른 난이도와 그 난이도의 다음 레벨 */
+export function sudokuNext(s: Pick<PuzzleState, "sudokuCleared" | "chosenDifficulty">): { difficulty: SudokuDifficulty; level: number } {
+  const difficulty = s.chosenDifficulty ?? DEFAULT_DIFFICULTY;
+  return { difficulty, level: (s.sudokuCleared[difficulty] ?? 0) + 1 };
+}
+
 export const usePuzzleStore = create<PuzzleState>()(
   persist(
     (set, get) => ({
-      clearedLevel: 0,
+      sudokuCleared: {},
       bestSeconds: {},
       settings: { inputMode: "cell-first", highlightSame: true, showConflicts: true, sound: true, haptics: true },
       game: null,
@@ -112,7 +123,7 @@ export const usePuzzleStore = create<PuzzleState>()(
       chooseDifficulty: (difficulty) => set({ chosenDifficulty: difficulty }),
       startLevel: (level) => {
         const current = get().game;
-        const difficulty = get().chosenDifficulty ?? difficultyForLevel(level);
+        const difficulty = get().chosenDifficulty ?? DEFAULT_DIFFICULTY;
         if (current && current.level === level && current.difficulty === difficulty && !current.completed) return current;
         const paused = { ...get().paused };
         // 하던 판은 버리지 않고 그 난이도 자리에 넣어 둡니다.
@@ -134,12 +145,13 @@ export const usePuzzleStore = create<PuzzleState>()(
         const game = update(before);
         if (game === before) return;
         if (game.completed && !before.completed) {
-          const best = get().bestSeconds[game.level];
+          const key = `${game.difficulty}:${game.level}`;
+          const best = get().bestSeconds[key];
           const lines = sudokuScore(game.difficulty, game.elapsedSeconds, !!game.usedCheck);
           set({
             game,
-            clearedLevel: Math.max(get().clearedLevel, game.level),
-            bestSeconds: { ...get().bestSeconds, [game.level]: best ? Math.min(best, game.elapsedSeconds) : game.elapsedSeconds },
+            sudokuCleared: { ...get().sudokuCleared, [game.difficulty]: Math.max(get().sudokuCleared[game.difficulty] ?? 0, game.level) },
+            bestSeconds: { ...get().bestSeconds, [key]: best ? Math.min(best, game.elapsedSeconds) : game.elapsedSeconds },
             score: get().score + total(lines),
             stats: addStat(get().stats, game.difficulty, game.elapsedSeconds),
             lastScore: lines,
@@ -251,7 +263,19 @@ export const usePuzzleStore = create<PuzzleState>()(
     }),
     {
       name: "oneuldopuzzle-v1",
-      version: 1,
+      version: 2,
+      // 버전 1은 모든 난이도가 레벨 하나를 같이 썼습니다. 깬 레벨은 그때 고른 난이도의 레벨로 옮깁니다.
+      migrate: (persisted, version) => {
+        const p = (persisted ?? {}) as Partial<PuzzleState> & { clearedLevel?: number; bestSeconds?: Record<string, number> };
+        if (version < 2) {
+          const cleared = p.clearedLevel ?? 0;
+          const difficulty = p.chosenDifficulty ?? difficultyForLevel(cleared + 1);
+          const next = { ...p, chosenDifficulty: difficulty, sudokuCleared: cleared ? { [difficulty]: cleared } : {}, bestSeconds: {} };
+          delete next.clearedLevel;
+          return next as never;
+        }
+        return p as never;
+      },
       // 예전 저장본에 없는 설정은 기본값으로 채웁니다.
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<PuzzleState>;
@@ -259,7 +283,7 @@ export const usePuzzleStore = create<PuzzleState>()(
       },
       // 되돌리기 기록은 저장하지 않아도 이어 하기에 문제없어 용량을 아낍니다.
       partialize: (s) => ({
-        clearedLevel: s.clearedLevel,
+        sudokuCleared: s.sudokuCleared,
         bestSeconds: s.bestSeconds,
         settings: s.settings,
         chosenDifficulty: s.chosenDifficulty,
