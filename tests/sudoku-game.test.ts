@@ -92,3 +92,36 @@ test("다시 하기: 넣은 숫자·메모·시간·되돌리기 기록이 비�
   assert.equal(r.memoMode, true);
   assert.equal(r.id, g.id);
 });
+
+test("막힌 칸과 틀린 칸을 찾는다(레벨 13 보통 신고 화면)", async () => {
+  const { puzzleForLevel } = await import("../src/puzzle/sudoku/generator.ts");
+  const { newGame, deadCells, wrongCells } = await import("../src/puzzle/sudoku/game.ts");
+  const p = puzzleForLevel(13, "normal");
+  const screen = [1,4,9,5,2,7,3,6,8, 5,8,7,6,9,3,1,4,2, 0,0,3,1,8,4,5,7,9, 8,0,1,9,6,5,2,3,7, 0,0,5,7,3,1,8,9,4, 3,9,0,8,4,2,6,1,5, 7,5,6,2,1,9,4,8,3, 4,1,2,3,7,8,9,5,6, 9,3,8,4,5,6,7,2,1];
+  const game = { ...newGame({ id: p.id, level: 13, difficulty: p.difficulty, puzzle: p.puzzle, solution: p.solution }), values: screen };
+  assert.deepEqual(deadCells(game), [3 * 9 + 1, 5 * 9 + 2]);
+  assert.equal(wrongCells(game).length, 8);
+  assert.deepEqual(deadCells(newGame({ id: p.id, level: 13, difficulty: p.difficulty, puzzle: p.puzzle, solution: p.solution })), []);
+});
+
+test("시간만 흐른 판은 손댄 판이 아니다(이어 하기 0:03 신고)", async () => {
+  const { hasProgress } = await import("../src/puzzle/sudoku/game.ts");
+  const g = newGame({ id: "t", level: 1, difficulty: "easy", puzzle: generateSudoku("t", "easy").puzzle, solution: generateSudoku("t", "easy").solution });
+  assert.equal(hasProgress(tick(g, 3)), false);
+  const empty = g.values.indexOf(0);
+  assert.equal(hasProgress(tapNumber(tapCell(g, empty, "cell-first"), 5, "cell-first")), true);
+});
+
+test("답대로 다 채운 줄을 찾는다", async () => {
+  const { newlyCompletedCells } = await import("../src/puzzle/sudoku/game.ts");
+  const p = generateSudoku("line", "easy");
+  const g = newGame({ id: "l", level: 1, difficulty: "easy", puzzle: p.puzzle, solution: p.solution });
+  // 첫 줄의 빈칸 하나만 남기고 채운 판에서 마지막 칸을 채우면 그 줄이 나옵니다.
+  const row = Array.from({ length: 9 }, (_, c) => c);
+  const blanks = row.filter((i) => p.puzzle[i] === 0);
+  const almost = { ...g, values: g.values.map((v, i) => (row.includes(i) && i !== blanks[0] ? p.solution[i] : v)) };
+  const done = { ...almost, values: almost.values.map((v, i) => (i === blanks[0] ? p.solution[i] : v)) };
+  const cells = newlyCompletedCells(almost, done);
+  assert.ok(row.every((i) => cells.includes(i)));
+  assert.deepEqual(newlyCompletedCells(done, done), []);
+});

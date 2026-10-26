@@ -16,6 +16,7 @@ export default function SudokuCellContent({ value, notes, given, conflict }: Pro
         component="span"
         className="sudoku-value"
         sx={{
+          position: "relative",
           fontSize: "clamp(18px, 6.2vw, 30px)",
           fontWeight: given ? 700 : 600,
           lineHeight: 1,

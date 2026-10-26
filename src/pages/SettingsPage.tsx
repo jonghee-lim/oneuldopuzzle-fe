@@ -15,7 +15,7 @@ export default function SettingsPage() {
   return (
     <Page>
       <Box component="header" sx={{ display: "flex", alignItems: "center", px: 1, pt: "calc(env(safe-area-inset-top) + 8px)" }}>
-        <IconButton aria-label="뒤로" onClick={() => navigate(-1)}>
+        <IconButton aria-label="뒤로" onClick={() => (window.history.state?.idx > 0 ? navigate(-1) : navigate("/"))}>
           <ArrowBackIosNewIcon fontSize="small" />
         </IconButton>
         <Typography component="h1" sx={{ fontWeight: 800, fontSize: 20 }}>
@@ -45,6 +45,11 @@ export default function SettingsPage() {
         <Group title="화면">
           <Row label="같은 숫자 강조" checked={settings.highlightSame} onChange={(v) => updateSettings({ highlightSame: v })} />
           <Row label="겹친 숫자 빨갛게 표시" checked={settings.showConflicts} onChange={(v) => updateSettings({ showConflicts: v })} divider />
+        </Group>
+        <Group title="소리·진동">
+          <Row label="효과음" checked={settings.sound} onChange={(v) => updateSettings({ sound: v })} />
+          <Row label="진동" checked={settings.haptics} onChange={(v) => updateSettings({ haptics: v })} divider />
+          <Typography sx={{ px: 2, pb: 1.5, fontSize: 13, color: "text.secondary" }}>진동은 지원하는 기기에서만 울립니다.</Typography>
         </Group>
       </Box>
     </Page>

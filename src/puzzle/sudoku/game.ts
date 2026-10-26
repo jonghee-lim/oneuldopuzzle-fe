@@ -1,7 +1,7 @@
 // 스도쿠 한 판의 상태와 조작. 화면과 떨어진 순수 함수라 단위 테스트로 확인합니다.
 // 입력 방식 두 가지(설계서): 칸 먼저 누르기(cell-first), 숫자 먼저 고르기(number-first).
 import { popHistory, pushHistory, type History } from "../core/history.ts";
-import { CELLS, PEERS, findConflicts, type SudokuGrid } from "./rules.ts";
+import { CELLS, PEERS, UNITS, findConflicts, type SudokuGrid } from "./rules.ts";
 import type { SudokuDifficulty } from "./generator.ts";
 
 export type InputMode = "cell-first" | "number-first";
@@ -31,6 +31,8 @@ export interface SudokuGame {
   history: History<Step>;
   elapsedSeconds: number;
   completed: boolean;
+  /** '틀린 칸 보기'를 쓴 판(도움 없이 점수를 주지 않음) */
+  usedCheck?: boolean;
 }
 
 export function newGame(args: { id: string; level: number; difficulty: SudokuDifficulty; puzzle: SudokuGrid; solution: SudokuGrid }): SudokuGame {
@@ -159,4 +161,38 @@ export function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
   return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+/** 손댄 판인지. 열어 두기만 해도 시간은 흐르므로 시간이 아니라 넣은 숫자·메모로 봅니다(2026-10-26 '이어 하기 0:03' 신고). */
+export function hasProgress(game: SudokuGame): boolean {
+  return game.values.some((v, i) => v !== game.puzzle[i]) || game.notes.some(Boolean);
+}
+
+/** 빈칸인데 같은 줄·칸줄·상자 숫자 때문에 넣을 수 있는 숫자가 하나도 없는 칸. 앞에서 넣은 숫자 중 틀린 것이 있다는 뜻입니다. */
+export function deadCells(game: SudokuGame): number[] {
+  const dead: number[] = [];
+  game.values.forEach((v, i) => {
+    if (v) return;
+    let used = 0;
+    for (const p of PEERS[i]) used |= 1 << game.values[p];
+    if ((used & 0b1111111110) === 0b1111111110) dead.push(i);
+  });
+  return dead;
+}
+
+/** 내가 넣은 숫자 중 답과 다른 칸 */
+export function wrongCells(game: SudokuGame): number[] {
+  const wrong: number[] = [];
+  game.values.forEach((v, i) => {
+    if (v && !isGiven(game, i) && v !== game.solution[i]) wrong.push(i);
+  });
+  return wrong;
+}
+
+/** 이번 조작으로 답대로 다 채워진 줄·칸줄·상자의 칸들(채우는 순간 반짝이는 데 씁니다) */
+export function newlyCompletedCells(before: SudokuGame, after: SudokuGame): number[] {
+  const solved = (g: SudokuGame, unit: readonly number[]) => unit.every((i) => g.values[i] === g.solution[i]);
+  const cells = new Set<number>();
+  for (const unit of UNITS) if (solved(after, unit) && !solved(before, unit)) unit.forEach((i) => cells.add(i));
+  return [...cells];
 }

@@ -3,7 +3,7 @@ import RestartAltIcon from "@mui/icons-material/RestartAlt";
 import SquareRoundedIcon from "@mui/icons-material/SquareRounded";
 import UndoIcon from "@mui/icons-material/Undo";
 import { Box, ToggleButton, ToggleButtonGroup, Typography } from "@mui/material";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import DessertArt from "../components/dessert/DessertArt";
 import Page from "../components/layout/Page";
@@ -13,8 +13,10 @@ import ConfirmRestart from "../components/puzzle/ConfirmRestart";
 import PuzzleBoard from "../components/puzzle/PuzzleBoard";
 import StageTabs from "../components/puzzle/StageTabs";
 import ToolButton from "../components/puzzle/ToolButton";
+import { cue } from "../platform/feedback";
 import { colDone, newNonogramGame, restartNonogram, rowDone, setTool, tapNonogramCell, undoNonogram, type NonogramTool } from "../puzzle/nonogram/game";
 import { NONOGRAMS } from "../puzzle/nonogram/puzzles";
+import { usePuzzleStore } from "../stores/puzzleStore";
 import { dessert } from "../theme/palette";
 
 export default function NonogramPage() {
@@ -31,12 +33,21 @@ function NonogramStage({ stage, onStage }: { stage: number; onStage: (stage: num
   const doneRows = useMemo(() => Array.from({ length: height }, (_, r) => rowDone(game, r)), [game, height]);
   const doneCols = useMemo(() => Array.from({ length: width }, (_, c) => colDone(game, c)), [game, width]);
   const clueSize = width > 5 ? 13 : 16;
+  const cleared = usePuzzleStore((s) => s.nonogramCleared);
+  const clearNonogram = usePuzzleStore((s) => s.clearNonogram);
+  const lastScore = usePuzzleStore((s) => s.lastScore);
+  useEffect(() => {
+    if (game.solved) {
+      clearNonogram(stage);
+      cue("clear");
+    }
+  }, [game.solved, stage, clearNonogram]);
 
   return (
     <Page>
       <PuzzleHeader title="노노그램" subtitle={`스페셜 스테이지 · ${picture.rows.length}×${width}`} />
       <Box sx={{ px: 1.5, pt: 1 }}>
-        <StageTabs stages={NONOGRAMS.map((_, i) => `${i + 1}단계`)} value={stage} onChange={onStage} />
+        <StageTabs stages={NONOGRAMS.map((_, i) => `${i + 1}단계`)} done={NONOGRAMS.map((_, i) => cleared.includes(i))} value={stage} onChange={onStage} />
       </Box>
 
       {/* 위 단서는 판의 열에, 왼쪽 단서는 판의 행에 맞춰 같은 격자에 둡니다. */}
@@ -88,7 +99,10 @@ function NonogramStage({ stage, onStage }: { stage: number; onStage: (stage: num
         <PuzzleBoard
           size={width}
           label={`노노그램 판 ${height}×${width}`}
-          onCellTap={(index) => setGame((g) => tapNonogramCell(g, index))}
+          onCellTap={(index) => {
+            cue(game.tool === "fill" ? "place" : "tap");
+            setGame((g) => tapNonogramCell(g, index));
+          }}
           cellLabel={(index) => {
             const state = game.cells[index] === 1 ? "칠함" : game.cells[index] === 2 ? "X 표시" : "빈칸";
             return `${Math.floor(index / width) + 1}행 ${(index % width) + 1}열 ${state}`;
@@ -142,6 +156,7 @@ function NonogramStage({ stage, onStage }: { stage: number; onStage: (stage: num
         title={`${picture.name} 완성!`}
         detail="스페셜 노노그램을 풀었어요."
         nextLabel="다음 단계"
+        score={lastScore}
         onNext={stage < NONOGRAMS.length - 1 ? () => onStage(stage + 1) : undefined}
       />
     </Page>

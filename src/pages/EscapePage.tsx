@@ -1,7 +1,7 @@
 import RestartAltIcon from "@mui/icons-material/RestartAlt";
 import UndoIcon from "@mui/icons-material/Undo";
 import { Box, ButtonBase, Typography } from "@mui/material";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import DessertArt from "../components/dessert/DessertArt";
 import Page from "../components/layout/Page";
@@ -11,9 +11,11 @@ import ConfirmRestart from "../components/puzzle/ConfirmRestart";
 import PuzzleBoard from "../components/puzzle/PuzzleBoard";
 import StageTabs from "../components/puzzle/StageTabs";
 import ToolButton from "../components/puzzle/ToolButton";
+import { cue } from "../platform/feedback";
 import { newEscapeGame, restartEscape, tapBlock, tapEscapeCell, targetCells, undoEscape } from "../puzzle/escape/game";
 import { ESCAPES } from "../puzzle/escape/puzzles";
 import { ESCAPE_SIZE, EXIT_ROW, TARGET_ID } from "../puzzle/escape/rules";
+import { usePuzzleStore } from "../stores/puzzleStore";
 import { dessert } from "../theme/palette";
 import { radius } from "../theme/shape";
 
@@ -32,6 +34,16 @@ function EscapeStage({ stage, onStage }: { stage: number; onStage: (stage: numbe
   const [confirm, setConfirm] = useState(false);
   const targets = useMemo(() => targetCells(game), [game]);
   const cellPct = 100 / ESCAPE_SIZE;
+  const escapeBest = usePuzzleStore((s) => s.escapeBest);
+  const clearEscape = usePuzzleStore((s) => s.clearEscape);
+  const lastScore = usePuzzleStore((s) => s.lastScore);
+  const best = escapeBest[stage];
+  useEffect(() => {
+    if (game.escaped) {
+      clearEscape(stage, game.moves, puzzle.minMoves);
+      cue("clear");
+    }
+  }, [game.escaped, game.moves, stage, puzzle.minMoves, clearEscape]);
 
   const blocks = (
     <Box sx={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
@@ -49,7 +61,10 @@ function EscapeStage({ stage, onStage }: { stage: number; onStage: (stage: numbe
             disableRipple
             aria-label={`${isTarget ? "딸기 블록" : `블록 ${b.id}`}, ${b.horizontal ? "가로" : "세로"} ${b.length}칸${selected ? ", 고름" : ""}`}
             aria-pressed={selected}
-            onClick={() => setGame((g) => tapBlock(g, b.id))}
+            onClick={() => {
+              cue("tap");
+              setGame((g) => tapBlock(g, b.id));
+            }}
             sx={{
               position: "absolute",
               pointerEvents: "auto",
@@ -77,13 +92,16 @@ function EscapeStage({ stage, onStage }: { stage: number; onStage: (stage: numbe
     <Page>
       <PuzzleHeader title="블록 탈출" subtitle={`스페셜 스테이지 · ${puzzle.name}`} right={<span aria-label="이동 수">{game.moves}수</span>} />
       <Box sx={{ px: 1.5, pt: 1 }}>
-        <StageTabs stages={ESCAPES.map((_, i) => `${i + 1}단계`)} value={stage} onChange={onStage} />
+        <StageTabs stages={ESCAPES.map((_, i) => `${i + 1}단계`)} done={ESCAPES.map((_, i) => escapeBest[i] !== undefined)} value={stage} onChange={onStage} />
       </Box>
       <Box sx={{ px: 1.5, pt: 2 }}>
         <PuzzleBoard
           size={ESCAPE_SIZE}
           label="블록 탈출 판"
-          onCellTap={(index) => setGame((g) => tapEscapeCell(g, index))}
+          onCellTap={(index) => {
+            if (targets.has(index)) cue("place");
+            setGame((g) => tapEscapeCell(g, index));
+          }}
           cellLabel={(index) => `${Math.floor(index / ESCAPE_SIZE) + 1}행 ${(index % ESCAPE_SIZE) + 1}열${targets.has(index) ? ", 옮길 수 있는 칸" : ""}`}
           cellColor={(index) => (targets.has(index) ? dessert.mint : dessert.creamDeep)}
           renderCell={(index) =>
@@ -94,7 +112,7 @@ function EscapeStage({ stage, onStage }: { stage: number; onStage: (stage: numbe
       </Box>
       <Box aria-live="polite" sx={{ px: 2, pt: 1.5, minHeight: 44, textAlign: "center" }}>
         <Typography sx={{ fontSize: 14, color: "text.secondary" }}>
-          {game.selected ? "초록 점이 있는 칸을 누르면 블록이 그쪽으로 밀려요." : `블록을 눌러 고르세요. 딸기 블록을 오른쪽 출구로 보내면 성공이에요. 최소 ${puzzle.minMoves}수.`}
+          {game.selected ? "초록 점이 있는 칸을 누르면 블록이 그쪽으로 밀려요." : `블록을 눌러 고르세요. 딸기 블록을 오른쪽 출구로 보내면 성공이에요. 최소 ${puzzle.minMoves}수${best !== undefined ? ` · 내 기록 ${best}수` : ""}.`}
         </Typography>
       </Box>
       <Box sx={{ px: 1.5, pt: 1, display: "flex", gap: 1 }}>
@@ -118,6 +136,7 @@ function EscapeStage({ stage, onStage }: { stage: number; onStage: (stage: numbe
         title="탈출 성공!"
         detail={`${game.moves}수 만에 나왔어요 · 최소 ${puzzle.minMoves}수`}
         nextLabel="다음 단계"
+        score={lastScore}
         onNext={stage < ESCAPES.length - 1 ? () => onStage(stage + 1) : undefined}
       />
     </Page>

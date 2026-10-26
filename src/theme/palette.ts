@@ -34,3 +34,9 @@ export type DessertId = (typeof DESSERTS)[number]["id"];
 export function dessertForLevel(level: number): (typeof DESSERTS)[number] {
   return DESSERTS[(level - 1) % DESSERTS.length];
 }
+
+/**
+ * 색깔 구역 퍼즐의 구역 색(8개). 서로 이웃해도 구별되도록 색상(빨강·주황·노랑·초록·청록·파랑·보라·분홍)을 고루 나누고,
+ * 색만으로 구분하지 않도록 구역 경계에 굵은 선을 함께 그립니다.
+ */
+export const ZONE_COLORS = ["#F9C9D4", "#FBD9B0", "#F6EDA6", "#C9E8B8", "#B7E3DC", "#BCD5F2", "#D7C9F0", "#EBC7E6"] as const;

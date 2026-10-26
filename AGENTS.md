@@ -6,3 +6,6 @@
 - 퍼즐 규칙·생성·검사는 `src/puzzle/<퍼즐>`의 순수 함수로 두고 단위 테스트(`tests/*.test.ts`)로 확인한다. 화면은 `PuzzleBoard`를 함께 쓴다.
 - 문제를 바꾸면 `npm test`와 `npm run check:pool -- 1000`을 함께 돌린다. 화면을 바꾸면 `npm run test:e2e`.
 - 화면·컴포넌트는 공유 패키지를 직접 import하지 않고 `src/theme` 같은 얇은 파일을 거친다(eslint로 막음).
+- 점수 규칙은 `src/puzzle/core/score.ts` 한 곳(테스트 `tests/score.test.ts`), 효과음·진동은 `src/platform/feedback.ts`의 `cue()`로만 낸다(설정에서 끌 수 있음, 기본 켜짐).
+- 내가 넣은 숫자는 민트, 빨강은 겹친 숫자·'틀린 칸 보기'에만 쓴다. 이어 하기 판단은 시간이 아니라 넣은 숫자·메모로 한다(`hasProgress`).
+- 색깔 구역 퍼즐(`src/puzzle/zones`)은 레벨 번호로 만들고 답 하나 + 찍지 않고 풀리는 판만 쓴다. 레벨 1~120은 단위 테스트가 검사한다.

@@ -20,6 +20,11 @@ const shots = process.argv[2];
   await page.getByRole("button", { name: "어려움", exact: true }).tap();
   await page.getByRole("button", { name: "시작하기" }).tap();
   await page.getByText("어려움").first().waitFor();
+  // 판을 열어 두기만 하고 돌아오면 '이어 하기'가 아니라 '시작하기'(2026-10-26 '이어 하기 0:03' 신고)
+  await page.waitForTimeout(2500);
+  await page.getByRole("button", { name: "처음 화면으로" }).tap();
+  await page.getByRole("button", { name: "시작하기" }).waitFor();
+  await page.getByRole("button", { name: "시작하기" }).tap();
   const hard = await page.evaluate(() => JSON.parse(localStorage.getItem("oneuldopuzzle-v1")).state.game);
   assert.equal(hard.difficulty, "hard");
   await page.getByRole("button", { name: "처음 화면으로" }).tap();
@@ -66,10 +71,19 @@ const shots = process.argv[2];
     await page.getByRole("button", { name: String(game.solution[i]), exact: true }).tap();
   }
   await page.getByRole("heading", { name: "레벨 1 완성!" }).waitFor();
+  await page.getByText(/^\+\d+점$/).waitFor();
   if (shots) await page.screenshot({ path: `${shots}/4-clear.png` });
   await page.getByRole("button", { name: "다음 레벨" }).tap();
   await page.getByText("레벨 2").first().waitFor();
   if (shots) await page.screenshot({ path: `${shots}/5-level2.png` });
+
+  // 점수표에 방금 푼 판이 올라간다
+  await page.goto(`${BASE}/records`);
+  await page.getByRole("heading", { name: "점수표" }).waitFor();
+  const st = await page.evaluate(() => JSON.parse(localStorage.getItem("oneuldopuzzle-v1")).state);
+  assert.ok(st.score > 0);
+  assert.equal(st.stats.easy.cleared, 1);
+  if (shots) await page.screenshot({ path: `${shots}/5b-records.png`, fullPage: true });
 
   // 숫자 먼저 고르기
   await page.goto(`${BASE}/settings`);
