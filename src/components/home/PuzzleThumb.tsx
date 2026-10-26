@@ -5,7 +5,7 @@ import { ZONE_COLORS, dessert } from "../../theme/palette";
 const ZONES = [0, 0, 1, 1, 0, 2, 2, 1, 3, 2, 2, 1, 3, 3, 2, 2];
 const HEART = [0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 1, 0, 0];
 
-export default function PuzzleThumb({ kind, size = 56 }: { kind: "zones" | "nonogram" | "escape"; size?: number }) {
+export default function PuzzleThumb({ kind, size = 56 }: { kind: "zones" | "nonogram" | "escape" | "sliding" | "blocks"; size?: number }) {
   return (
     <Box aria-hidden component="svg" viewBox="0 0 40 40" sx={{ width: size, height: size, display: "block" }}>
       {kind === "zones" &&
@@ -28,6 +28,26 @@ export default function PuzzleThumb({ kind, size = 56 }: { kind: "zones" | "nono
           <rect x="2" y="2" width="17" height="9" rx="2.5" fill={ZONE_COLORS[6]} />
           <rect x="12" y="28" width="26" height="9" rx="2.5" fill={ZONE_COLORS[1]} />
           <rect x="38" y="15" width="2" height="9" fill={dessert.strawberryDeep} />
+        </g>
+      )}
+      {kind === "sliding" &&
+        [1, 2, 3, 4, 0, 6, 7, 5, 8].map((n, i) =>
+          n === 0 ? null : (
+            <g key={i}>
+              <rect x={(i % 3) * 13 + 1} y={Math.floor(i / 3) * 13 + 1} width="12" height="12" rx="2.5" fill={n === i + 1 ? dessert.mint : dessert.paper} />
+              <text x={(i % 3) * 13 + 7} y={Math.floor(i / 3) * 13 + 10.5} fontSize="8" fontWeight="800" textAnchor="middle" fill={dessert.cocoa}>
+                {n}
+              </text>
+            </g>
+          ),
+        )}
+      {kind === "blocks" && (
+        <g stroke={dessert.cocoaSoft} strokeWidth="0.8">
+          <path d="M1 1h19v9h-9.5v9.5H1z" fill={ZONE_COLORS[4]} />
+          <path d="M20 1h19v19H20z" fill={ZONE_COLORS[0]} />
+          <path d="M10.5 10h9.5v29H10.5z" fill={ZONE_COLORS[2]} />
+          <path d="M1 19.5h9.5v19.5H1z" fill={ZONE_COLORS[6]} />
+          <path d="M20 20h19v19H20z" fill={ZONE_COLORS[3]} strokeDasharray="2 1.5" fillOpacity="0.35" />
         </g>
       )}
     </Box>

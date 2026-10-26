@@ -17,6 +17,8 @@ export default function RecordsPage() {
   const score = usePuzzleStore((s) => s.score);
   const stats = usePuzzleStore((s) => s.stats);
   const zoneCleared = usePuzzleStore((s) => s.zoneCleared);
+  const slideCleared = usePuzzleStore((s) => s.slideCleared);
+  const blockCleared = usePuzzleStore((s) => s.blockCleared);
   const nonogramCleared = usePuzzleStore((s) => s.nonogramCleared);
   const escapeBest = usePuzzleStore((s) => s.escapeBest);
   const sudokuCleared = (Object.keys(DIFFICULTY_LABEL) as SudokuDifficulty[]).reduce((n, d) => n + (stats[d]?.cleared ?? 0), 0);
@@ -34,7 +36,7 @@ export default function RecordsPage() {
               <Box component="span" sx={{ fontSize: 20, ml: 0.5 }}>점</Box>
             </Typography>
             <Typography sx={{ fontSize: 13, color: dessert.cocoaSoft }}>
-              스도쿠 {sudokuCleared}판 · 색깔 구역 {zoneCleared}판 · 스페셜 {nonogramCleared.length + Object.keys(escapeBest).length}판
+              스도쿠 {sudokuCleared}판 · 보너스 {zoneCleared + slideCleared + blockCleared}판 · 스페셜 {nonogramCleared.length + Object.keys(escapeBest).length}판
             </Typography>
           </Box>
         </Box>
@@ -46,8 +48,15 @@ export default function RecordsPage() {
           />
         </Section>
 
-        <Section title="색깔 구역">
-          <Table head={["깬 레벨", "푼 판", "최고 기록", "평균"]} rows={[[`${zoneCleared}`, ...statCells(stats.zones)]]} />
+        <Section title="보너스 퍼즐">
+          <Table
+            head={["퍼즐", "깬 레벨", "최고 기록", "평균"]}
+            rows={[
+              ["색깔 구역", `${zoneCleared}`, ...statCells(stats.zones).slice(1)],
+              ["블록 채우기", `${blockCleared}`, ...statCells(stats.blocks).slice(1)],
+              ["슬라이딩", `${slideCleared}`, ...statCells(stats.sliding).slice(1)],
+            ]}
+          />
         </Section>
 
         <Section title="스페셜 스테이지">
@@ -70,7 +79,7 @@ export default function RecordsPage() {
               {formatTime(SUDOKU_PAR_SECONDS.expert)} 안)
             </li>
             <li>‘틀린 칸 보기’ 없이 풀면 도움 없이 점수 더</li>
-            <li>색깔 구역: 판이 클수록 높은 점수, 빠르면 더</li>
+            <li>보너스 퍼즐: 판이 클수록 높은 점수, 빠르면(슬라이딩은 최소 수면) 절반 더</li>
             <li>스페셜: 처음 풀면 100점, 블록 탈출을 최소 수로 풀면 50점 더</li>
           </Box>
         </Section>

@@ -9,3 +9,4 @@
 - 점수 규칙은 `src/puzzle/core/score.ts` 한 곳(테스트 `tests/score.test.ts`), 효과음·진동은 `src/platform/feedback.ts`의 `cue()`로만 낸다(설정에서 끌 수 있음, 기본 켜짐).
 - 내가 넣은 숫자는 민트, 빨강은 겹친 숫자·'틀린 칸 보기'에만 쓴다. 이어 하기 판단은 시간이 아니라 넣은 숫자·메모로 한다(`hasProgress`).
 - 색깔 구역 퍼즐(`src/puzzle/zones`)은 레벨 번호로 만들고 답 하나 + 찍지 않고 풀리는 판만 쓴다. 레벨 1~120은 단위 테스트가 검사한다.
+- 슬라이딩(`src/puzzle/sliding`)은 3×3 최소 수 표로 레벨마다 최소 수가 1씩 늘게 고르고, 블록 채우기(`src/puzzle/blocks`)는 블록을 돌리지 않으며 채우는 방법이 하나뿐인 판만 쓴다.

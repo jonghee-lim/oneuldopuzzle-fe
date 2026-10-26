@@ -1,4 +1,4 @@
-// 퍼즐 모음: 시작 화면에서 들어가 노노그램·블록 탈출 1단계와 색깔 구역 레벨 1을 터치로만 끝까지 풉니다.
+// 퍼즐 모음: 시작 화면에서 들어가 노노그램·블록 탈출 1단계와 색깔 구역·슬라이딩·블록 채우기 레벨 1을 터치로만 끝까지 풉니다.
 // 사용: node --experimental-strip-types tests/e2e/special.mjs [스크린샷 폴더]  (BASE_URL, CHROME_PATH 선택)
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
@@ -7,6 +7,8 @@ import { pictureGrid } from "../../src/puzzle/nonogram/rules.ts";
 import { ESCAPES } from "../../src/puzzle/escape/puzzles.ts";
 import { solveEscape } from "../../src/puzzle/escape/solver.ts";
 import { ESCAPE_SIZE, parseBoard } from "../../src/puzzle/escape/rules.ts";
+import { slideFrom } from "../../src/puzzle/sliding/rules.ts";
+import { minSlides } from "../../src/puzzle/sliding/solver.ts";
 
 const { chromium, devices } = createRequire(import.meta.url)("playwright");
 const BASE = process.env.BASE_URL || "http://localhost:4180";
@@ -72,10 +74,49 @@ if (shots) await page.screenshot({ path: `${shots}/s6-zones-clear.png` });
 await page.getByRole("button", { name: "다음 레벨" }).tap();
 await page.getByRole("heading", { name: "레벨 2" }).waitFor();
 
-// 점수표: 스페셜·색깔 구역 기록
+// 슬라이딩: 최소 수 표를 따라 한 칸씩 줄여 가며 누르면 최소 수로 완성
+await page.goto(BASE);
+await page.getByRole("link", { name: /슬라이딩/ }).tap();
+await page.getByRole("grid", { name: /슬라이딩 판/ }).waitFor();
+const slide = await page.evaluate(() => JSON.parse(localStorage.getItem("oneuldopuzzle-v1")).state.slideGame);
+let board = slide.board;
+const sc = page.getByRole("gridcell");
+if (shots) await page.screenshot({ path: `${shots}/s9-sliding.png` });
+while (minSlides(board, 3) > 0) {
+  const d = minSlides(board, 3);
+  const i = board.findIndex((_, k) => {
+    const n = slideFrom(board, 3, k);
+    return n && minSlides(n, 3) === d - 1;
+  });
+  await sc.nth(i).tap();
+  board = slideFrom(board, 3, i);
+}
+await page.getByRole("heading", { name: "레벨 1 완성!" }).waitFor();
+await page.getByText("최소 수 +6").waitFor();
+if (shots) await page.screenshot({ path: `${shots}/s10-sliding-clear.png` });
+
+// 블록 채우기: 블록을 고르고 답의 기준 칸을 누르기, 엉뚱한 자리는 막힘 안내
+await page.goto(BASE);
+await page.getByRole("link", { name: /블록 채우기/ }).tap();
+await page.getByRole("grid", { name: /블록 채우기 판/ }).waitFor();
+const bg = await page.evaluate(() => JSON.parse(localStorage.getItem("oneuldopuzzle-v1")).state.blockGame);
+const bc = page.getByRole("gridcell");
+const anchors = bg.puzzle.shapes.map((_, k) => bg.puzzle.solution.indexOf(k));
+if (shots) await page.screenshot({ path: `${shots}/s11-blocks.png` });
+for (let k = 0; k < anchors.length; k += 1) {
+  const chip = page.getByRole("button", { name: new RegExp(`^블록 ${k + 1},`) });
+  if ((await chip.getAttribute("aria-pressed")) !== "true") await chip.tap();
+  await bc.nth(anchors[k]).tap();
+}
+await page.getByRole("heading", { name: "레벨 1 완성!" }).waitFor();
+if (shots) await page.screenshot({ path: `${shots}/s12-blocks-clear.png` });
+
+// 점수표: 스페셜·보너스 기록
 await page.goto(`${BASE}/records`);
 const st = await page.evaluate(() => JSON.parse(localStorage.getItem("oneuldopuzzle-v1")).state);
 assert.equal(st.zoneCleared, 1);
+assert.equal(st.slideCleared, 1);
+assert.equal(st.blockCleared, 1);
 assert.deepEqual(st.nonogramCleared, [0]);
 assert.ok(st.escapeBest[0] >= ESCAPES[0].minMoves);
 assert.ok(st.score >= 250);

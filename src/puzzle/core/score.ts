@@ -28,6 +28,22 @@ export function zoneScore(size: number, seconds: number): ScoreLine[] {
   return lines;
 }
 
+/** 슬라이딩: 판 크기 점수 + 최소 수로 풀면 절반 더(3×3만 최소 수를 압니다) */
+export function slideScore(size: number, moves: number, minMoves: number | null): ScoreLine[] {
+  const base = size * 4;
+  const lines: ScoreLine[] = [{ label: "완성", points: base }];
+  if (minMoves !== null && moves <= minMoves) lines.push({ label: "최소 수", points: Math.round(base / 2) });
+  return lines;
+}
+
+/** 블록 채우기: 판 크기 점수 + 빠르면 절반 더 */
+export function blockScore(size: number, seconds: number): ScoreLine[] {
+  const base = size * 3;
+  const lines: ScoreLine[] = [{ label: "완성", points: base }];
+  if (seconds <= size * size * 4) lines.push({ label: "빠르게", points: Math.round(base / 2) });
+  return lines;
+}
+
 /** 스페셜: 처음 풀 때 100점, 블록 탈출은 최소 수로 풀면 50점 더(처음 한 번씩) */
 export function specialScore(firstClear: boolean, perfectFirst: boolean): ScoreLine[] {
   const lines: ScoreLine[] = [];

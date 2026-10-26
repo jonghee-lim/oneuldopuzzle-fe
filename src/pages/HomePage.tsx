@@ -12,6 +12,8 @@ import { ESCAPES } from "../puzzle/escape/puzzles";
 import { NONOGRAMS } from "../puzzle/nonogram/puzzles";
 import { DIFFICULTY_LABEL, difficultyForLevel, type SudokuDifficulty } from "../puzzle/sudoku/generator";
 import { formatTime, hasProgress } from "../puzzle/sudoku/game";
+import { blockSizeForLevel } from "../puzzle/blocks/generator";
+import { slideSizeForLevel } from "../puzzle/sliding/generator";
 import { zoneSizeForLevel } from "../puzzle/zones/generator";
 import { usePuzzleStore } from "../stores/puzzleStore";
 import { dessert, dessertForLevel } from "../theme/palette";
@@ -37,6 +39,14 @@ export default function HomePage() {
   const zoneLevel = zoneCleared + 1;
   const zoneResume = zoneGame && zoneGame.level === zoneLevel && !zoneGame.solved && zoneGame.cells.some(Boolean);
   const escapeDone = Object.keys(escapeBest).length;
+  const slideCleared = usePuzzleStore((s) => s.slideCleared);
+  const slideGame = usePuzzleStore((s) => s.slideGame);
+  const blockCleared = usePuzzleStore((s) => s.blockCleared);
+  const blockGame = usePuzzleStore((s) => s.blockGame);
+  const slideLevel = slideCleared + 1;
+  const blockLevel = blockCleared + 1;
+  const slideResume = slideGame && slideGame.level === slideLevel && !slideGame.solved && slideGame.moves > 0;
+  const blockResume = blockGame && blockGame.level === blockLevel && !blockGame.solved && blockGame.placed.some((a) => a !== null);
 
   return (
     <Page>
@@ -100,9 +110,9 @@ export default function HomePage() {
         </Box>
 
         <Typography component="h2" sx={{ fontSize: 18, fontWeight: 800, px: 0.5, pt: 1 }}>
-          퍼즐 모음
+          보너스 퍼즐
         </Typography>
-        {/* 다른 퍼즐은 같은 크기의 타일로 나란히 둡니다. 색깔 구역은 레벨이 끝없이 이어져 넓게 둡니다. */}
+        {/* 레벨이 끝없이 이어지는 보너스 퍼즐. 색깔 구역은 가장 인기 있는 종류라 넓게 둡니다. */}
         <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1.5 }}>
           <Tile
             to="/zones"
@@ -112,8 +122,31 @@ export default function HomePage() {
             title="색깔 구역"
             detail="줄·구역마다 마카롱 하나"
             badge={zoneResume ? "이어 하기" : `레벨 ${zoneLevel} · ${zoneSizeForLevel(zoneLevel)}×${zoneSizeForLevel(zoneLevel)}`}
-            isNew={zoneCleared === 0}
           />
+          <Tile
+            to="/blocks"
+            tint={dessert.vanilla}
+            thumb={<PuzzleThumb kind="blocks" />}
+            title="블록 채우기"
+            detail="빈틈없이 꽉 채우기"
+            badge={blockResume ? "이어 하기" : `레벨 ${blockLevel} · ${blockSizeForLevel(blockLevel)}×${blockSizeForLevel(blockLevel)}`}
+            isNew={blockCleared === 0}
+          />
+          <Tile
+            to="/sliding"
+            tint={dessert.strawberryMilk}
+            thumb={<PuzzleThumb kind="sliding" />}
+            title="슬라이딩"
+            detail="밀어서 순서대로"
+            badge={slideResume ? "이어 하기" : `레벨 ${slideLevel} · ${slideSizeForLevel(slideLevel)}×${slideSizeForLevel(slideLevel)}`}
+            isNew={slideCleared === 0}
+          />
+        </Box>
+
+        <Typography component="h2" sx={{ fontSize: 18, fontWeight: 800, px: 0.5, pt: 1 }}>
+          스페셜 스테이지
+        </Typography>
+        <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1.5, pb: 2 }}>
           <Tile
             to="/special/nonogram"
             tint={dessert.strawberryMilk}
@@ -121,7 +154,6 @@ export default function HomePage() {
             title="노노그램"
             detail="숫자로 그림 완성"
             badge={`${nonogramCleared.length}/${NONOGRAMS.length} 완료`}
-            special
           />
           <Tile
             to="/special/escape"
@@ -130,10 +162,8 @@ export default function HomePage() {
             title="블록 탈출"
             detail="딸기 블록을 출구로"
             badge={`${escapeDone}/${ESCAPES.length} 완료`}
-            special
           />
         </Box>
-        <Typography sx={{ fontSize: 13, color: "text.secondary", px: 0.5, pb: 2 }}>곧 추가: 블록 채우기 · 슬라이딩 퍼즐</Typography>
       </Box>
     </Page>
   );
@@ -147,7 +177,6 @@ function Tile({
   detail,
   badge,
   wide = false,
-  special = false,
   isNew = false,
 }: {
   to: string;
@@ -157,7 +186,6 @@ function Tile({
   detail: string;
   badge: string;
   wide?: boolean;
-  special?: boolean;
   isNew?: boolean;
 }) {
   return (
@@ -186,7 +214,6 @@ function Tile({
       <Box sx={{ minWidth: 0, flex: wide ? 1 : undefined }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, flexWrap: "wrap" }}>
           <Typography sx={{ fontSize: 17, fontWeight: 800 }}>{title}</Typography>
-          {special && <Chip label="스페셜" color={dessert.strawberryDeep} />}
           {isNew && <Chip label="NEW" color={dessert.mintDeep} />}
         </Box>
         <Typography sx={{ fontSize: 13, color: dessert.cocoaSoft, mt: 0.25 }}>{detail}</Typography>

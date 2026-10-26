@@ -1,7 +1,11 @@
 // 진행 상황·점수·설정을 기기에 저장합니다. 계정·동기화는 이후 단계에서 공용 API에 붙입니다.
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { specialScore, sudokuScore, total, zoneScore, type ScoreLine } from "../puzzle/core/score";
+import { blockScore, slideScore, specialScore, sudokuScore, total, zoneScore, type ScoreLine } from "../puzzle/core/score";
+import { blocksForLevel } from "../puzzle/blocks/generator";
+import { newBlockGame, type BlockGame } from "../puzzle/blocks/game";
+import { slideForLevel } from "../puzzle/sliding/generator";
+import { newSlideGame, type SlideGame } from "../puzzle/sliding/game";
 import { difficultyForLevel, puzzleForLevel, type SudokuDifficulty } from "../puzzle/sudoku/generator";
 import { hasProgress, newGame, type InputMode, type SudokuGame } from "../puzzle/sudoku/game";
 import { zonesForLevel } from "../puzzle/zones/generator";
@@ -26,7 +30,7 @@ export interface PuzzleStat {
   totalSeconds: number;
 }
 
-export type StatKey = SudokuDifficulty | "zones";
+export type StatKey = SudokuDifficulty | "zones" | "sliding" | "blocks";
 
 interface PuzzleState {
   /** 깬 가장 높은 레벨(0이면 아직 없음) */
@@ -46,6 +50,12 @@ interface PuzzleState {
   /** 색깔 구역 퍼즐 */
   zoneCleared: number;
   zoneGame: ZoneGame | null;
+  /** 슬라이딩 퍼즐 */
+  slideCleared: number;
+  slideGame: SlideGame | null;
+  /** 블록 채우기 */
+  blockCleared: number;
+  blockGame: BlockGame | null;
   /** 스페셜 체험: 다 푼 노노그램 단계 */
   nonogramCleared: number[];
   /** 스페셜 체험: 블록 탈출 단계별 가장 적은 이동 수 */
@@ -58,6 +68,10 @@ interface PuzzleState {
   updateSettings: (patch: Partial<PuzzleSettings>) => void;
   startZone: () => ZoneGame;
   updateZone: (update: (game: ZoneGame) => ZoneGame) => void;
+  startSlide: () => SlideGame;
+  updateSlide: (update: (game: SlideGame) => SlideGame) => void;
+  startBlocks: () => BlockGame;
+  updateBlocks: (update: (game: BlockGame) => BlockGame) => void;
   clearNonogram: (stage: number) => void;
   clearEscape: (stage: number, moves: number, minMoves: number) => void;
 }
@@ -88,6 +102,10 @@ export const usePuzzleStore = create<PuzzleState>()(
       lastScore: null,
       zoneCleared: 0,
       zoneGame: null,
+      slideCleared: 0,
+      slideGame: null,
+      blockCleared: 0,
+      blockGame: null,
       nonogramCleared: [],
       escapeBest: {},
 
@@ -158,6 +176,58 @@ export const usePuzzleStore = create<PuzzleState>()(
         }
         set({ zoneGame });
       },
+      startSlide: () => {
+        const level = get().slideCleared + 1;
+        const current = get().slideGame;
+        if (current && current.level === level && !current.solved) return current;
+        const slideGame = newSlideGame(level, slideForLevel(level));
+        set({ slideGame });
+        return slideGame;
+      },
+      updateSlide: (update) => {
+        const before = get().slideGame;
+        if (!before) return;
+        const slideGame = update(before);
+        if (slideGame === before) return;
+        if (slideGame.solved && !before.solved) {
+          const lines = slideScore(slideGame.puzzle.size, slideGame.moves, slideGame.puzzle.minMoves);
+          set({
+            slideGame,
+            slideCleared: Math.max(get().slideCleared, slideGame.level),
+            score: get().score + total(lines),
+            stats: addStat(get().stats, "sliding", slideGame.elapsedSeconds),
+            lastScore: lines,
+          });
+          return;
+        }
+        set({ slideGame });
+      },
+      startBlocks: () => {
+        const level = get().blockCleared + 1;
+        const current = get().blockGame;
+        if (current && current.level === level && !current.solved) return current;
+        const blockGame = newBlockGame(level, blocksForLevel(level));
+        set({ blockGame });
+        return blockGame;
+      },
+      updateBlocks: (update) => {
+        const before = get().blockGame;
+        if (!before) return;
+        const blockGame = update(before);
+        if (blockGame === before) return;
+        if (blockGame.solved && !before.solved) {
+          const lines = blockScore(blockGame.puzzle.size, blockGame.elapsedSeconds);
+          set({
+            blockGame,
+            blockCleared: Math.max(get().blockCleared, blockGame.level),
+            score: get().score + total(lines),
+            stats: addStat(get().stats, "blocks", blockGame.elapsedSeconds),
+            lastScore: lines,
+          });
+          return;
+        }
+        set({ blockGame });
+      },
       clearNonogram: (stage) => {
         const first = !get().nonogramCleared.includes(stage);
         const lines = specialScore(first, false);
@@ -198,6 +268,10 @@ export const usePuzzleStore = create<PuzzleState>()(
         stats: s.stats,
         zoneCleared: s.zoneCleared,
         zoneGame: s.zoneGame ? { ...s.zoneGame, history: [] } : null,
+        slideCleared: s.slideCleared,
+        slideGame: s.slideGame ? { ...s.slideGame, history: [] } : null,
+        blockCleared: s.blockCleared,
+        blockGame: s.blockGame ? { ...s.blockGame, history: [] } : null,
         nonogramCleared: s.nonogramCleared,
         escapeBest: s.escapeBest,
         game: s.game ? { ...s.game, history: [], selected: null } : null,
