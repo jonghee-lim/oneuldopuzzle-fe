@@ -37,3 +37,13 @@ export function restartSlide(game: SlideGame): SlideGame {
 export function tickSlide(game: SlideGame, seconds = 1): SlideGame {
   return game.solved ? game : { ...game, elapsedSeconds: game.elapsedSeconds + seconds };
 }
+
+/** 조각을 쓸어 밀기: 빈칸이 쓴 방향(같은 줄·칸줄)에 있을 때만 그 조각부터 빈칸 쪽으로 밉니다. */
+export function swipeSlide(game: SlideGame, index: number, dir: "up" | "down" | "left" | "right"): SlideGame {
+  const size = game.puzzle.size;
+  const blank = game.board.indexOf(0);
+  const [r, c, br, bc] = [Math.floor(index / size), index % size, Math.floor(blank / size), blank % size];
+  const toward =
+    (dir === "left" && r === br && bc < c) || (dir === "right" && r === br && bc > c) || (dir === "up" && c === bc && br < r) || (dir === "down" && c === bc && br > r);
+  return toward ? tapSlide(game, index) : game;
+}

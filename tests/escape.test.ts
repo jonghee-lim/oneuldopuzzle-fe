@@ -51,3 +51,18 @@ test("조작: 갈 수 없는 칸을 누르면 선택만 풀리고, 되돌리기�
   assert.deepEqual(undoEscape(g).blocks, before);
   assert.deepEqual(restartEscape(g).blocks, before);
 });
+
+test("블록을 쓸어 옮기면 쓴 칸 수만큼, 막히면 갈 수 있는 데까지", async () => {
+  const { newEscapeGame, swipeBlock } = await import("../src/puzzle/escape/game.ts");
+  // 딸기 블록(X)이 2행 0~1칸, 오른쪽은 비어 있는 판
+  const g = newEscapeGame("......" + "......" + "XX...." + "......" + "......" + "......");
+  const one = swipeBlock(g, "X", 1, 1);
+  assert.equal(one.blocks.find((b) => b.id === "X").col, 1);
+  assert.equal(one.moves, 1);
+  const far = swipeBlock(g, "X", 1, 9);
+  assert.equal(far.blocks.find((b) => b.id === "X").col, 4);
+  assert.ok(far.escaped);
+  const back = swipeBlock(g, "X", -1, 2);
+  assert.equal(back.blocks, g.blocks); // 왼쪽 끝이라 못 감
+  assert.equal(back.moves, 0);
+});

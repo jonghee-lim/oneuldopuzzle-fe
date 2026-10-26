@@ -1,4 +1,4 @@
-// 블록 탈출 한 판의 조작. 끌기 없이 '블록 누르기 → 갈 칸 누르기'로 옮깁니다.
+// 블록 탈출 한 판의 조작. '블록 누르기 → 갈 칸 누르기' 또는 블록을 쓸어서(스와이프) 옮깁니다.
 import { popHistory, pushHistory, type History } from "../core/history.ts";
 import { ESCAPE_SIZE, isEscaped, moveBlock, parseBoard, reachablePositions, type Block } from "./rules.ts";
 
@@ -61,4 +61,20 @@ export function undoEscape(game: EscapeGame): EscapeGame {
 
 export function restartEscape(game: EscapeGame): EscapeGame {
   return { ...game, blocks: game.start, selected: null, moves: 0, history: [], escaped: false };
+}
+
+/** 블록을 쓸어 옮기기: 쓴 칸 수만큼(최소 1칸) 그 방향으로, 막히면 갈 수 있는 데까지 갑니다. */
+export function swipeBlock(game: EscapeGame, id: string, step: -1 | 1, cells: number): EscapeGame {
+  if (game.escaped) return game;
+  const block = game.blocks.find((b) => b.id === id);
+  if (!block) return game;
+  const current = block.horizontal ? block.col : block.row;
+  const reach = reachablePositions(game.blocks, id).filter((p) => (p - current) * step > 0);
+  if (reach.length === 0) return { ...game, selected: id };
+  const want = current + step * Math.max(1, cells);
+  const far = step > 0 ? Math.max(...reach) : Math.min(...reach);
+  const pos = step > 0 ? Math.min(want, far) : Math.max(want, far);
+  const blocks = moveBlock(game.blocks, id, pos);
+  const escaped = isEscaped(blocks);
+  return { ...game, blocks, moves: game.moves + 1, history: pushHistory(game.history, game.blocks), escaped, selected: escaped ? null : id };
 }

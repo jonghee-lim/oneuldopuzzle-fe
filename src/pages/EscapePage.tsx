@@ -12,7 +12,10 @@ import PuzzleBoard from "../components/puzzle/PuzzleBoard";
 import StageTabs from "../components/puzzle/StageTabs";
 import ToolButton from "../components/puzzle/ToolButton";
 import { cue } from "../platform/feedback";
-import { newEscapeGame, restartEscape, tapBlock, tapEscapeCell, targetCells, undoEscape } from "../puzzle/escape/game";
+import { newEscapeGame, restartEscape, swipeBlock, tapBlock, tapEscapeCell, targetCells, undoEscape } from "../puzzle/escape/game";
+import type { Block } from "../puzzle/escape/rules";
+import { useSwipe, type Swipe } from "../components/puzzle/useSwipe";
+import type { ReactNode } from "react";
 import { ESCAPES } from "../puzzle/escape/puzzles";
 import { ESCAPE_SIZE, EXIT_ROW, TARGET_ID } from "../puzzle/escape/rules";
 import { usePuzzleStore } from "../stores/puzzleStore";
@@ -56,14 +59,24 @@ function EscapeStage({ stage, onStage }: { stage: number; onStage: (stage: numbe
         const isTarget = b.id === TARGET_ID;
         const selected = game.selected === b.id;
         return (
-          <ButtonBase
+          <EscapeBlock
             key={b.id}
-            disableRipple
-            aria-label={`${isTarget ? "딸기 블록" : `블록 ${b.id}`}, ${b.horizontal ? "가로" : "세로"} ${b.length}칸${selected ? ", 고름" : ""}`}
-            aria-pressed={selected}
-            onClick={() => {
+            block={b}
+            label={`${isTarget ? "딸기 블록" : `블록 ${b.id}`}, ${b.horizontal ? "가로" : "세로"} ${b.length}칸${selected ? ", 고름" : ""}`}
+            selected={selected}
+            onTap={() => {
               cue("tap");
               setGame((g) => tapBlock(g, b.id));
+            }}
+            onSwipe={(sw) => {
+              // 블록 방향과 같은 축으로 쓴 것만 받습니다. 쓴 거리를 칸 수로 바꿔 그만큼 옮깁니다.
+              const axisOk = b.horizontal ? sw.dir === "left" || sw.dir === "right" : sw.dir === "up" || sw.dir === "down";
+              if (!axisOk) return;
+              // 블록 크기 = 칸 수 × 칸 크기 - 여백 8px 이므로 거꾸로 칸 크기를 구합니다.
+              const cellPx = ((b.horizontal ? sw.rect.width : sw.rect.height) + 8) / b.length;
+              const step = sw.dir === "right" || sw.dir === "down" ? 1 : -1;
+              setGame((g) => swipeBlock(g, b.id, step, Math.round(sw.distance / cellPx)));
+              cue("place");
             }}
             sx={{
               position: "absolute",
@@ -82,7 +95,7 @@ function EscapeStage({ stage, onStage }: { stage: number; onStage: (stage: numbe
             }}
           >
             {isTarget && <DessertArt id="cake" size="70%" />}
-          </ButtonBase>
+          </EscapeBlock>
         );
       })}
     </Box>
@@ -112,7 +125,7 @@ function EscapeStage({ stage, onStage }: { stage: number; onStage: (stage: numbe
       </Box>
       <Box aria-live="polite" sx={{ px: 2, pt: 1.5, minHeight: 44, textAlign: "center" }}>
         <Typography sx={{ fontSize: 14, color: "text.secondary" }}>
-          {game.selected ? "초록 점이 있는 칸을 누르면 블록이 그쪽으로 밀려요." : `블록을 눌러 고르세요. 딸기 블록을 오른쪽 출구로 보내면 성공이에요. 최소 ${puzzle.minMoves}수${best !== undefined ? ` · 내 기록 ${best}수` : ""}.`}
+          {game.selected ? "초록 점이 있는 칸을 누르거나 블록을 쓸면 그쪽으로 밀려요." : `블록을 쓸거나 눌러서 옮기세요. 딸기 블록을 오른쪽 출구로 보내면 성공이에요. 최소 ${puzzle.minMoves}수${best !== undefined ? ` · 내 기록 ${best}수` : ""}.`}
         </Typography>
       </Box>
       <Box sx={{ px: 1.5, pt: 1, display: "flex", gap: 1 }}>
@@ -140,5 +153,30 @@ function EscapeStage({ stage, onStage }: { stage: number; onStage: (stage: numbe
         onNext={stage < ESCAPES.length - 1 ? () => onStage(stage + 1) : undefined}
       />
     </Page>
+  );
+}
+
+/** 블록 하나: 누르면 고르기, 쓸면 그 방향으로 옮기기 */
+function EscapeBlock({
+  label,
+  selected,
+  onTap,
+  onSwipe,
+  sx,
+  children,
+}: {
+  block: Block;
+  label: string;
+  selected: boolean;
+  onTap: () => void;
+  onSwipe: (swipe: Swipe) => void;
+  sx: object;
+  children: ReactNode;
+}) {
+  const swipe = useSwipe(onSwipe);
+  return (
+    <ButtonBase disableRipple aria-label={label} aria-pressed={selected} onClick={onTap} {...swipe} sx={sx}>
+      {children}
+    </ButtonBase>
   );
 }

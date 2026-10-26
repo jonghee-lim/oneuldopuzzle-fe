@@ -80,3 +80,12 @@ test("블록 채우기 판 조작: 놓기·막힘·빼기·되돌리기·완성"
   h = tapBlockCell(h, anchors[0]).game;
   assert.equal(h.placed[0], null);
 });
+
+test("슬라이딩: 빈칸 쪽으로 쓸면 밀리고 반대쪽은 그대로", async () => {
+  const { swipeSlide } = await import("../src/puzzle/sliding/game.ts");
+  const g = newSlideGame(1, { id: "t", size: 3, board: [1, 2, 3, 4, 5, 6, 0, 7, 8], minMoves: 2 });
+  assert.equal(swipeSlide(g, 7, "right"), g);
+  assert.deepEqual(swipeSlide(g, 7, "left").board, [1, 2, 3, 4, 5, 6, 7, 0, 8]);
+  assert.deepEqual(swipeSlide(g, 8, "left").board, [1, 2, 3, 4, 5, 6, 7, 8, 0]);
+  assert.deepEqual(swipeSlide(g, 3, "down").board, [1, 2, 3, 0, 5, 6, 4, 7, 8]);
+});

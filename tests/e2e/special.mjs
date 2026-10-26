@@ -55,6 +55,28 @@ for (const [id, pos] of solved.moves) {
 await page.getByRole("heading", { name: "탈출 성공!" }).waitFor();
 if (shots) await page.screenshot({ path: `${shots}/s4-escape-clear.png` });
 
+// 블록 탈출 쓸기: 1단계 첫 수를 블록을 쓸어서 두고, 판 위에서 쓸어도 페이지가 움직이지 않는다
+await page.goto(`${BASE}/special/escape?stage=0`);
+await page.getByRole("grid", { name: "블록 탈출 판" }).waitFor();
+{
+  const [id, pos] = solved.moves[0];
+  const b = parseBoard(ESCAPES[0].board).find((x) => x.id === id);
+  const cur = b.horizontal ? b.col : b.row;
+  const el = page.getByRole("button", { name: new RegExp(`^${id === "X" ? "딸기 블록" : `블록 ${id}`},`) });
+  const box = await el.boundingBox();
+  const cell = (await page.getByRole("grid", { name: "블록 탈출 판" }).boundingBox()).width / ESCAPE_SIZE;
+  const d = (pos - cur) * cell;
+  const [x, y] = [box.x + box.width / 2, box.y + box.height / 2];
+  const scrollBefore = await page.evaluate(() => window.scrollY);
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x + (b.horizontal ? d : 0), y + (b.horizontal ? 0 : d), { steps: 5 });
+  await page.mouse.up();
+  await page.getByText("1수", { exact: true }).waitFor();
+  const moved = await page.evaluate(() => window.scrollY);
+  assert.equal(moved, scrollBefore);
+}
+
 // 색깔 구역: 홈 타일에서 들어가 답 자리를 눌러 완성하고 다음 레벨로
 await page.goto(BASE);
 await page.getByRole("link", { name: /색깔 구역/ }).tap();
@@ -88,7 +110,16 @@ while (minSlides(board, 3) > 0) {
     const n = slideFrom(board, 3, k);
     return n && minSlides(n, 3) === d - 1;
   });
-  await sc.nth(i).tap();
+  // 누르기 대신 빈칸 쪽으로 쓸어서 밉니다(스와이프).
+  const blank = board.indexOf(0);
+  const box = await sc.nth(i).boundingBox();
+  const dx = Math.sign((blank % 3) - (i % 3)) * 60;
+  const dy = Math.sign(Math.floor(blank / 3) - Math.floor(i / 3)) * 60;
+  const [x, y] = [box.x + box.width / 2, box.y + box.height / 2];
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x + dx, y + dy, { steps: 4 });
+  await page.mouse.up();
   board = slideFrom(board, 3, i);
 }
 await page.getByRole("heading", { name: "레벨 1 완성!" }).waitFor();

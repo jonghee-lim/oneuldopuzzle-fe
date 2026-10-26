@@ -10,7 +10,7 @@ import ConfirmRestart from "../components/puzzle/ConfirmRestart";
 import PuzzleBoard from "../components/puzzle/PuzzleBoard";
 import ToolButton from "../components/puzzle/ToolButton";
 import { cue } from "../platform/feedback";
-import { restartSlide, tapSlide, tickSlide, undoSlide } from "../puzzle/sliding/game";
+import { restartSlide, swipeSlide, tapSlide, tickSlide, undoSlide } from "../puzzle/sliding/game";
 import { movableCells } from "../puzzle/sliding/rules";
 import { formatTime } from "../puzzle/sudoku/game";
 import { usePuzzleStore } from "../stores/puzzleStore";
@@ -88,7 +88,7 @@ export default function SlidingPage() {
       />
       <Box sx={{ px: 2, pt: 0.5, textAlign: "center" }}>
         <Typography sx={{ fontSize: 14, color: "text.secondary" }}>
-          빈칸 옆줄의 조각을 눌러 밀어서 1부터 순서대로 맞춰 주세요.
+          조각을 빈칸 쪽으로 쓸거나 눌러서 1부터 순서대로 맞춰 주세요.
           {minMoves !== null && ` 최소 ${minMoves}수.`}
         </Typography>
       </Box>
@@ -104,6 +104,12 @@ export default function SlidingPage() {
           cellLabel={(index) => {
             const n = game.board[index];
             return `${Math.floor(index / size) + 1}행 ${(index % size) + 1}열 ${n ? `${n}번 조각${movable.has(index) ? ", 밀 수 있음" : ""}` : "빈칸"}`;
+          }}
+          onCellSwipe={(index, dir) => {
+            const before = usePuzzleStore.getState().slideGame;
+            updateSlide((g) => swipeSlide(g, index, dir));
+            const after = usePuzzleStore.getState().slideGame;
+            if (after !== before) cue(after?.solved ? "clear" : "place");
           }}
           cellColor={() => dessert.creamDeep}
           renderCell={() => null}

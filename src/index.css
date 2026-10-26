@@ -4,6 +4,11 @@ body,
   min-height: 100%;
 }
 
+/* 화면 끝에서 당겨도 페이지 전체가 튕겨 내려가지 않게 합니다(iOS, 2026-10-26 신고). */
+html {
+  overscroll-behavior: none;
+}
+
 body {
   word-break: keep-all;
   -webkit-tap-highlight-color: transparent;
