@@ -54,3 +54,29 @@ export function tickZone(game: ZoneGame, seconds = 1): ZoneGame {
 export function zoneGameConflicts(game: ZoneGame): Set<number> {
   return zoneConflicts(game.puzzle.size, game.puzzle.regions, placedOf(game));
 }
+
+/** 힌트: 잘못 놓은 마카롱이 있으면 그 칸(remove), 없으면 아직 비어 있는 줄의 정답 칸 하나 */
+export interface ZoneHint {
+  index: number;
+  remove: boolean;
+}
+
+export function findZoneHint(game: ZoneGame): ZoneHint | null {
+  if (game.solved) return null;
+  const { size, solution } = game.puzzle;
+  const wrong = game.cells.findIndex((v, i) => v === 2 && solution[Math.floor(i / size)] !== i % size);
+  if (wrong >= 0) return { index: wrong, remove: true };
+  for (let r = 0; r < size; r += 1) {
+    const index = r * size + solution[r];
+    if (game.cells[index] !== 2) return { index, remove: false };
+  }
+  return null;
+}
+
+export function applyZoneHint(game: ZoneGame, hint: ZoneHint): ZoneGame {
+  const cells = game.cells.slice();
+  cells[hint.index] = hint.remove ? 0 : 2;
+  const { size, regions } = game.puzzle;
+  const solved = isZoneSolved(size, regions, cells.flatMap((v, i) => (v === 2 ? [i] : [])));
+  return { ...game, cells, history: pushHistory(game.history, game.cells), solved };
+}

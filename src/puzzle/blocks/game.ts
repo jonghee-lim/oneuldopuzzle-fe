@@ -84,3 +84,32 @@ export function restartBlocks(game: BlockGame): BlockGame {
 export function tickBlocks(game: BlockGame, seconds = 1): BlockGame {
   return game.solved ? game : { ...game, elapsedSeconds: game.elapsedSeconds + seconds };
 }
+
+/** 힌트: 정답과 다른 곳에 놓은 블록이 있으면 그 블록(remove), 없으면 아직 안 놓은 블록 하나와 정답 자리 */
+export interface BlockHint {
+  piece: number;
+  anchor: number;
+  remove: boolean;
+}
+
+/** 블록마다 정답 기준 칸(모양의 맨 윗줄 왼쪽 칸 = 정답 칸 중 가장 앞 번호) */
+export function solutionAnchors(puzzle: BlockPuzzle): number[] {
+  return puzzle.shapes.map((_, k) => puzzle.solution.indexOf(k));
+}
+
+export function findBlockHint(game: BlockGame): BlockHint | null {
+  if (game.solved) return null;
+  const anchors = solutionAnchors(game.puzzle);
+  const wrong = game.placed.findIndex((a, k) => a !== null && a !== anchors[k]);
+  if (wrong >= 0) return { piece: wrong, anchor: game.placed[wrong]!, remove: true };
+  const free = game.placed.findIndex((a) => a === null);
+  return free < 0 ? null : { piece: free, anchor: anchors[free], remove: false };
+}
+
+export function applyBlockHint(game: BlockGame, hint: BlockHint): BlockGame {
+  const placed = game.placed.slice();
+  placed[hint.piece] = hint.remove ? null : hint.anchor;
+  const solved = placed.every((a) => a !== null);
+  const selected = solved ? null : hint.remove ? hint.piece : nextFree(placed, hint.piece);
+  return { ...game, placed, selected, history: pushHistory(game.history, game.placed), solved };
+}

@@ -1,6 +1,7 @@
 // 블록 탈출 한 판의 조작. '블록 누르기 → 갈 칸 누르기' 또는 블록을 쓸어서(스와이프) 옮깁니다.
 import { popHistory, pushHistory, type History } from "../core/history.ts";
-import { ESCAPE_SIZE, isEscaped, moveBlock, parseBoard, reachablePositions, type Block } from "./rules.ts";
+import { ESCAPE_SIZE, formatBoard, isEscaped, moveBlock, parseBoard, reachablePositions, type Block } from "./rules.ts";
+import { solveEscape } from "./solver.ts";
 
 export interface EscapeGame {
   blocks: Block[];
@@ -74,6 +75,18 @@ export function swipeBlock(game: EscapeGame, id: string, step: -1 | 1, cells: nu
   const want = current + step * Math.max(1, cells);
   const far = step > 0 ? Math.max(...reach) : Math.min(...reach);
   const pos = step > 0 ? Math.min(want, far) : Math.max(want, far);
+  const blocks = moveBlock(game.blocks, id, pos);
+  const escaped = isEscaped(blocks);
+  return { ...game, blocks, moves: game.moves + 1, history: pushHistory(game.history, game.blocks), escaped, selected: escaped ? null : id };
+}
+
+/** 힌트: 지금 판에서 가장 적은 수로 빠져나가는 길의 첫 수 [블록, 옮길 위치] */
+export function findEscapeHint(game: EscapeGame): [string, number] | null {
+  if (game.escaped) return null;
+  return solveEscape(formatBoard(game.blocks))?.moves[0] ?? null;
+}
+
+export function applyEscapeHint(game: EscapeGame, [id, pos]: [string, number]): EscapeGame {
   const blocks = moveBlock(game.blocks, id, pos);
   const escaped = isEscaped(blocks);
   return { ...game, blocks, moves: game.moves + 1, history: pushHistory(game.history, game.blocks), escaped, selected: escaped ? null : id };

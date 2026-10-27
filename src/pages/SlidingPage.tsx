@@ -11,25 +11,37 @@ import PuzzleBoard from "../components/puzzle/PuzzleBoard";
 import ToolButton from "../components/puzzle/ToolButton";
 import { cue } from "../platform/feedback";
 import { restartSlide, swipeSlide, tapSlide, tickSlide, undoSlide } from "../puzzle/sliding/game";
+import { slideHint } from "../puzzle/sliding/hint";
 import { movableCells } from "../puzzle/sliding/rules";
 import { formatTime } from "../puzzle/sudoku/game";
 import { usePuzzleStore } from "../stores/puzzleStore";
+import { useIsDaily } from "../components/daily/daily";
+import { useDailyClear } from "../components/daily/useDailyClear";
+import { useHint } from "../components/puzzle/useHint";
 import { dessert } from "../theme/palette";
 import { radius } from "../theme/shape";
 
 /** 슬라이딩 퍼즐(설계서 보너스): 빈칸과 같은 줄의 조각을 누르면 밀립니다. 조각은 미끄러지듯 움직입니다. */
 export default function SlidingPage() {
-  const game = usePuzzleStore((s) => s.slideGame);
+  const daily = useIsDaily();
+  const game = usePuzzleStore((s) => (daily ? s.dailySlide : s.slideGame));
   const cleared = usePuzzleStore((s) => s.slideCleared);
   const startSlide = usePuzzleStore((s) => s.startSlide);
-  const updateSlide = usePuzzleStore((s) => s.updateSlide);
+  const updateSlide = usePuzzleStore((s) => (daily ? s.updateDailySlide : s.updateSlide));
+  const startDailySlide = usePuzzleStore((s) => s.startDailySlide);
+  const hint = useHint();
+  const dailyClear = useDailyClear(game?.elapsedSeconds ?? 0);
   const lastScore = usePuzzleStore((s) => s.lastScore);
   const [confirm, setConfirm] = useState(false);
 
   useEffect(() => {
+    if (daily) {
+      startDailySlide();
+      return;
+    }
     const current = usePuzzleStore.getState().slideGame;
     if (!current || (!current.solved && current.level !== cleared + 1)) startSlide();
-  }, [cleared, startSlide]);
+  }, [daily, cleared, startSlide, startDailySlide]);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -81,7 +93,7 @@ export default function SlidingPage() {
   return (
     <Page>
       <PuzzleHeader
-        title={`레벨 ${game.level}`}
+        title={daily ? "오늘의 퍼즐" : `레벨 ${game.level}`}
         subtitle={`슬라이딩 · ${size}×${size}`}
         art={<DessertArt id="cookie" size={30} />}
         right={<span aria-label="이동 수">{game.moves}수</span>}
@@ -124,6 +136,16 @@ export default function SlidingPage() {
       <Box sx={{ px: 1.5, pt: 1, display: "flex", gap: 1 }}>
         <ToolButton label="다시 하기" onClick={() => setConfirm(true)} icon={<RestartAltIcon sx={{ fontSize: 18 }} />} />
         <Box sx={{ flex: 1 }} />
+        {hint.button(() =>
+          hint.give(
+            () => slideHint(game.board, size),
+            (index) => {
+              updateSlide((g) => tapSlide(g, index));
+              cue(usePuzzleStore.getState()[daily ? "dailySlide" : "slideGame"]?.solved ? "clear" : "place");
+            },
+            (index) => `${game.board[index]}번 조각을 밀었어요.`,
+          ),
+        )}
         <ToolButton label="되돌리기" onClick={() => updateSlide(undoSlide)} icon={<UndoIcon sx={{ fontSize: 18 }} />} />
       </Box>
 
@@ -139,12 +161,13 @@ export default function SlidingPage() {
       <ClearDialog
         open={game.solved}
         art={<DessertArt id="cookie" size={96} />}
-        title={`레벨 ${game.level} 완성!`}
-        detail={`${game.moves}수 · ${formatTime(game.elapsedSeconds)}${minMoves !== null ? ` · 최소 ${minMoves}수` : ""}`}
-        nextLabel="다음 레벨"
-        onNext={() => startSlide()}
-        score={lastScore}
+        title={daily ? dailyClear.title : `레벨 ${game.level} 완성!`}
+        detail={daily ? dailyClear.detail : `${game.moves}수 · ${formatTime(game.elapsedSeconds)}${minMoves !== null ? ` · 최소 ${minMoves}수` : ""}`}
+        nextLabel={daily ? dailyClear.nextLabel : "다음 레벨"}
+        onNext={daily ? dailyClear.onNext : () => startSlide()}
+        score={daily ? null : lastScore}
       />
+      {hint.toast}
     </Page>
   );
 }

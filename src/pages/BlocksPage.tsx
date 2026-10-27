@@ -10,27 +10,38 @@ import ConfirmRestart from "../components/puzzle/ConfirmRestart";
 import PuzzleBoard from "../components/puzzle/PuzzleBoard";
 import ToolButton from "../components/puzzle/ToolButton";
 import { cue } from "../platform/feedback";
-import { canPlace, occupancy, restartBlocks, selectBlock, tapBlockCell, tickBlocks, undoBlocks } from "../puzzle/blocks/game";
+import { applyBlockHint, canPlace, findBlockHint, occupancy, restartBlocks, selectBlock, tapBlockCell, tickBlocks, undoBlocks } from "../puzzle/blocks/game";
 import type { Shape } from "../puzzle/blocks/rules";
 import { formatTime } from "../puzzle/sudoku/game";
 import { usePuzzleStore } from "../stores/puzzleStore";
+import { useIsDaily } from "../components/daily/daily";
+import { useDailyClear } from "../components/daily/useDailyClear";
+import { useHint } from "../components/puzzle/useHint";
 import { ZONE_COLORS, dessert } from "../theme/palette";
 import { radius } from "../theme/shape";
 
 /** 블록 채우기(설계서 보너스): 아래 블록을 고르고 판의 칸을 누르면 블록의 점 찍힌 칸이 거기에 놓입니다. */
 export default function BlocksPage() {
-  const game = usePuzzleStore((s) => s.blockGame);
+  const daily = useIsDaily();
+  const game = usePuzzleStore((s) => (daily ? s.dailyBlocks : s.blockGame));
   const cleared = usePuzzleStore((s) => s.blockCleared);
   const startBlocks = usePuzzleStore((s) => s.startBlocks);
-  const updateBlocks = usePuzzleStore((s) => s.updateBlocks);
+  const updateBlocks = usePuzzleStore((s) => (daily ? s.updateDailyBlocks : s.updateBlocks));
+  const startDailyBlocks = usePuzzleStore((s) => s.startDailyBlocks);
+  const hint = useHint();
+  const dailyClear = useDailyClear(game?.elapsedSeconds ?? 0);
   const lastScore = usePuzzleStore((s) => s.lastScore);
   const [confirm, setConfirm] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
+    if (daily) {
+      startDailyBlocks();
+      return;
+    }
     const current = usePuzzleStore.getState().blockGame;
     if (!current || (!current.solved && current.level !== cleared + 1)) startBlocks();
-  }, [cleared, startBlocks]);
+  }, [daily, cleared, startBlocks, startDailyBlocks]);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -49,7 +60,7 @@ export default function BlocksPage() {
   return (
     <Page>
       <PuzzleHeader
-        title={`레벨 ${game.level}`}
+        title={daily ? "오늘의 퍼즐" : `레벨 ${game.level}`}
         subtitle={`블록 채우기 · ${size}×${size}`}
         art={<DessertArt id="pudding" size={30} />}
         right={<span aria-label="걸린 시간">{formatTime(game.elapsedSeconds)}</span>}
@@ -134,6 +145,17 @@ export default function BlocksPage() {
       <Box sx={{ px: 1.5, pt: 2, display: "flex", gap: 1, mt: "auto" }}>
         <ToolButton label="다시 하기" onClick={() => setConfirm(true)} icon={<RestartAltIcon sx={{ fontSize: 18 }} />} />
         <Box sx={{ flex: 1 }} />
+        {hint.button(() =>
+          hint.give(
+            () => findBlockHint(game),
+            (h) => {
+              const next = applyBlockHint(game, h);
+              updateBlocks(() => next);
+              if (next.solved) cue("clear");
+            },
+            (h) => (h.remove ? `${h.piece + 1}번 블록은 자리가 아니라서 뺐어요.` : `${h.piece + 1}번 블록을 제자리에 놓았어요.`),
+          ),
+        )}
         <ToolButton label="되돌리기" onClick={() => updateBlocks(undoBlocks)} icon={<UndoIcon sx={{ fontSize: 18 }} />} />
       </Box>
 
@@ -149,12 +171,13 @@ export default function BlocksPage() {
       <ClearDialog
         open={game.solved}
         art={<DessertArt id="pudding" size={96} />}
-        title={`레벨 ${game.level} 완성!`}
-        detail={`걸린 시간 ${formatTime(game.elapsedSeconds)}`}
-        nextLabel="다음 레벨"
-        onNext={() => startBlocks()}
-        score={lastScore}
+        title={daily ? dailyClear.title : `레벨 ${game.level} 완성!`}
+        detail={daily ? dailyClear.detail : `걸린 시간 ${formatTime(game.elapsedSeconds)}`}
+        nextLabel={daily ? dailyClear.nextLabel : "다음 레벨"}
+        onNext={daily ? dailyClear.onNext : () => startBlocks()}
+        score={daily ? null : lastScore}
       />
+      {hint.toast}
     </Page>
   );
 }

@@ -32,7 +32,8 @@ export const DESSERTS = [
 export type DessertId = (typeof DESSERTS)[number]["id"];
 
 export function dessertForLevel(level: number): (typeof DESSERTS)[number] {
-  return DESSERTS[(level - 1) % DESSERTS.length];
+  const n = DESSERTS.length;
+  return DESSERTS[(((level - 1) % n) + n) % n];
 }
 
 /**

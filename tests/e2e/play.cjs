@@ -18,7 +18,7 @@ const shots = process.argv[2];
   await page.getByRole("heading", { name: "어떤 퍼즐을 풀까요?" }).waitFor();
   assert.equal(await page.getByRole("navigation", { name: "퍼즐 고르기" }).getByRole("link").count(), 6);
   if (shots) await page.screenshot({ path: `${shots}/1-home.png`, fullPage: true });
-  await page.getByRole("link", { name: /스도쿠/ }).tap();
+  await page.getByRole("navigation", { name: "퍼즐 고르기" }).getByRole("link", { name: /스도쿠/ }).tap();
   await page.getByRole("heading", { name: "레벨 1" }).waitFor();
   if (shots) await page.screenshot({ path: `${shots}/1b-sudoku.png` });
   // 난이도를 고르면 그 난이도로 문제가 나온다

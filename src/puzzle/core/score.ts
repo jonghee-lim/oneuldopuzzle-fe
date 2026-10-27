@@ -55,3 +55,13 @@ export function specialScore(firstClear: boolean, perfectFirst: boolean): ScoreL
 export function total(lines: readonly ScoreLine[]): number {
   return lines.reduce((sum, l) => sum + l.points, 0);
 }
+
+/** 힌트: 처음 3개, 오늘의 퍼즐 한 판마다 1개, 세 판을 다 풀면 2개 더 */
+export const HINT_START = 3;
+export const HINT_PER_DAILY = 1;
+export const HINT_DAILY_BONUS = 2;
+
+/** 오늘의 퍼즐 한 판을 풀었을 때 받는 힌트 수(세 판째면 보너스까지) */
+export function dailyHintReward(doneBefore: number, total: number): number {
+  return HINT_PER_DAILY + (doneBefore + 1 === total ? HINT_DAILY_BONUS : 0);
+}

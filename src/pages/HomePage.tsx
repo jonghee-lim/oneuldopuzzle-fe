@@ -3,6 +3,7 @@ import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import { Box, ButtonBase, IconButton, Typography } from "@mui/material";
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
+import DailyBand from "../components/daily/DailyBand";
 import PuzzleThumb from "../components/home/PuzzleThumb";
 import AppHeader from "../components/layout/AppHeader";
 import Page from "../components/layout/Page";
@@ -69,6 +70,8 @@ export default function HomePage() {
         <Typography sx={{ fontSize: 14, color: dessert.cocoaSoft, px: 0.5, mt: 0.25, mb: 2 }}>
           여섯 가지 퍼즐, 모두 레벨이 이어져요.
         </Typography>
+        <DailyBand />
+        <Box sx={{ height: 12 }} />
         {/* 여섯 퍼즐을 같은 크기 카드로 나란히 둡니다(2026-10-26 사용자 결정: 스도쿠만 크게 두지 않음). */}
         <Box component="nav" aria-label="퍼즐 고르기" sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1.5 }}>
           <Tile
