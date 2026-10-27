@@ -35,7 +35,7 @@ export type { PuzzleStat } from "../puzzle/core/record";
 
 export type StatKey = SudokuDifficulty | "zones" | "sliding" | "blocks";
 
-interface PuzzleState {
+export interface PuzzleState {
   /** 깬 가장 높은 레벨(0이면 아직 없음) */
   /** 난이도마다 따로 이어지는 스도쿠 레벨: 그 난이도에서 깬 마지막 레벨(2026-10-26 사용자 결정) */
   sudokuCleared: Partial<Record<SudokuDifficulty, number>>;

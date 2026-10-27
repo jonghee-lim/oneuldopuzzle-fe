@@ -10,8 +10,10 @@ import { usePuzzleStore } from "../../stores/puzzleStore";
 import { dessert } from "../../theme/palette";
 import { radius } from "../../theme/shape";
 import { DAILY_NAME, DAILY_ROUTE } from "./daily";
+import DailyShare from "./DailyShare";
+import { dailyRound } from "../../puzzle/core/share";
 
-/** 첫 화면 위 '오늘의 퍼즐' 띠: 날짜로 고른 세 판, 다 풀면 힌트 보너스와 연속 출석(디저트는 2026-10-27 없앰) */
+/** 첫 화면 위 '오늘의 퍼즐' 띠: 날짜로 고른, 누구에게나 같은 세 판. 다 풀면 힌트 보너스·연속 출석, 결과 공유(디저트는 2026-10-27 없앰) */
 export default function DailyBand() {
   const today = dateKey();
   const storedDate = usePuzzleStore((s) => s.dailyDate);
@@ -33,10 +35,10 @@ export default function DailyBand() {
         </Box>
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Typography id="daily-title" component="h2" sx={{ fontSize: 18, fontWeight: 800 }}>
-            오늘의 퍼즐 <Box component="span" sx={{ color: dessert.cocoaSoft, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{done.length}/{kinds.length}</Box>
+            오늘의 퍼즐 <Box component="span" sx={{ color: dessert.cocoaSoft, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>#{dailyRound(today)} · {done.length}/{kinds.length}</Box>
           </Typography>
           <Typography sx={{ fontSize: 13, color: dessert.cocoaSoft }}>
-            {allDone ? "오늘 몫을 다 풀었어요. 내일 또 만나요!" : `한 판마다 힌트 ${HINT_PER_DAILY}개, 세 판 다 풀면 ${HINT_DAILY_BONUS}개 더`}
+            {allDone ? "오늘 몫을 다 풀었어요. 결과를 보내 견줘 보세요!" : `모두 같은 세 판이에요. 한 판마다 힌트 ${HINT_PER_DAILY}개, 다 풀면 ${HINT_DAILY_BONUS}개 더`}
           </Typography>
         </Box>
         <Box sx={{ textAlign: "right", flexShrink: 0 }}>
@@ -76,6 +78,11 @@ export default function DailyBand() {
           );
         })}
       </Box>
+      {allDone && (
+        <Box sx={{ mt: 1 }}>
+          <DailyShare />
+        </Box>
+      )}
     </Box>
   );
 }

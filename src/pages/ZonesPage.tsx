@@ -159,6 +159,7 @@ export default function ZonesPage() {
         detail={daily ? dailyClear.detail : `걸린 시간 ${formatTime(game.elapsedSeconds)}`}
         nextLabel={daily ? dailyClear.nextLabel : "다음 레벨"}
         onNext={daily ? dailyClear.onNext : () => startZone()}
+        share={daily ? dailyClear.share : undefined}
         stars={daily ? null : lastStars}
       />
       {hint.toast}

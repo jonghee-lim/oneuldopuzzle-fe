@@ -167,6 +167,7 @@ export default function SlidingPage() {
         detail={daily ? dailyClear.detail : `${game.moves}수 · ${formatTime(game.elapsedSeconds)}${minMoves !== null ? ` · 최소 ${minMoves}수` : ""}`}
         nextLabel={daily ? dailyClear.nextLabel : "다음 레벨"}
         onNext={daily ? dailyClear.onNext : () => startSlide()}
+        share={daily ? dailyClear.share : undefined}
         stars={daily ? null : lastStars}
       />
       {hint.toast}

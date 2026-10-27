@@ -253,6 +253,7 @@ export default function PlayPage() {
           detail={dailyClear.detail}
           nextLabel={dailyClear.nextLabel}
           onNext={dailyClear.onNext}
+          share={dailyClear.share}
         />
       )}
       {hint.toast}
