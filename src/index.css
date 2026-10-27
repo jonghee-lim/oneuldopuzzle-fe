@@ -9,6 +9,12 @@ html {
   overscroll-behavior: none;
 }
 
+/* 내용이 화면보다 넓어지면 iOS가 화면 전체를 줄였다 키워 판 크기가 바뀌어 보입니다. 가로로는 넘치지 않게 막습니다(2026-10-27 신고). */
+html,
+body {
+  overflow-x: hidden;
+}
+
 body {
   word-break: keep-all;
   -webkit-tap-highlight-color: transparent;

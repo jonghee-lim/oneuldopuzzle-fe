@@ -10,7 +10,7 @@
     "test": "node --experimental-strip-types --no-warnings --test tests/*.test.ts",
     "check:pool": "node --experimental-strip-types --no-warnings tools/check-pool.ts",
     "preview": "vite preview",
-    "test:e2e": "node tests/e2e/play.cjs && node --experimental-strip-types --no-warnings tests/e2e/special.mjs && node tests/e2e/daily.mjs",
+    "test:e2e": "node tests/e2e/play.cjs && node --experimental-strip-types --no-warnings tests/e2e/special.mjs && node tests/e2e/daily.mjs && node tests/e2e/narrow.mjs",
     "make:escape": "node --experimental-strip-types --no-warnings tools/make-escape.ts"
   },
   "dependencies": {
