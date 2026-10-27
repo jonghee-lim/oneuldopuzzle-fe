@@ -46,3 +46,21 @@ test("조작: 칠하기·X 표시, 줄 완료 표시, 완성, 되돌리기·다�
   h = tapNonogramCell(h, 2);
   assert.equal(restartNonogram(h).cells.every((v) => v === 0), true);
 });
+
+test("끝없는 레벨 1~80: 판 크기가 맞고, 답이 하나이며, 줄 풀기만으로 풀린다", async () => {
+  const { nonogramForLevel, nonogramSizeForLevel, PICTURE_LEVELS } = await import("../src/puzzle/nonogram/generator.ts");
+  for (let level = 1; level <= 80; level += 1) {
+    const picture = nonogramForLevel(level);
+    const size = nonogramSizeForLevel(level);
+    assert.equal(picture.rows.length, size);
+    assert.ok(picture.rows.every((r) => r.length === size));
+    const grid = pictureGrid(picture);
+    const result = solveNonogram(cluesOf(grid, size, size));
+    assert.equal(result.count, 1, `레벨 ${level}`);
+    assert.equal(result.lineSolvable, true, `레벨 ${level}`);
+  }
+  assert.equal(nonogramForLevel(1).id, PICTURE_LEVELS[1]);
+  assert.equal(nonogramSizeForLevel(3), 5);
+  assert.equal(nonogramSizeForLevel(10), 7);
+  assert.equal(nonogramSizeForLevel(50), 10);
+});

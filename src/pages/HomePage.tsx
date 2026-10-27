@@ -9,8 +9,8 @@ import PuzzleThumb from "../components/home/PuzzleThumb";
 import AppHeader from "../components/layout/AppHeader";
 import Page from "../components/layout/Page";
 import { STARS_PER_DESSERT, isUnlocked, nextUnlockAt, totalStarsOf, unlockedByStars } from "../puzzle/core/collection";
-import { ESCAPES } from "../puzzle/escape/puzzles";
-import { NONOGRAMS } from "../puzzle/nonogram/puzzles";
+import { escapeForLevel } from "../puzzle/escape/levels";
+import { nonogramSizeForLevel } from "../puzzle/nonogram/generator";
 import { DIFFICULTY_LABEL } from "../puzzle/sudoku/generator";
 import { hasProgress } from "../puzzle/sudoku/game";
 import { blockSizeForLevel } from "../puzzle/blocks/generator";
@@ -30,7 +30,9 @@ export default function HomePage() {
   const zoneCleared = usePuzzleStore((s) => s.zoneCleared);
   const zoneGame = usePuzzleStore((s) => s.zoneGame);
   const nonogramCleared = usePuzzleStore((s) => s.nonogramCleared);
-  const escapeBest = usePuzzleStore((s) => s.escapeBest);
+  const nonogramGame = usePuzzleStore((s) => s.nonogramGame);
+  const escapeCleared = usePuzzleStore((s) => s.escapeCleared);
+  const escapeGame = usePuzzleStore((s) => s.escapeGame);
   const slideCleared = usePuzzleStore((s) => s.slideCleared);
   const slideGame = usePuzzleStore((s) => s.slideGame);
   const blockCleared = usePuzzleStore((s) => s.blockCleared);
@@ -44,6 +46,10 @@ export default function HomePage() {
   const slideResume = !!slideGame && slideGame.level === slideLevel && !slideGame.solved && slideGame.moves > 0;
   const blockLevel = blockCleared + 1;
   const blockResume = !!blockGame && blockGame.level === blockLevel && !blockGame.solved && blockGame.placed.some((a) => a !== null);
+  const nonogramLevel = nonogramCleared + 1;
+  const nonogramResume = !!nonogramGame && nonogramGame.level === nonogramLevel && !nonogramGame.solved && nonogramGame.cells.some(Boolean);
+  const escapeLevel = escapeCleared + 1;
+  const escapeResume = !!escapeGame && escapeGame.level === escapeLevel && !escapeGame.escaped && escapeGame.moves > 0;
   const size = (n: number) => `${n}×${n}`;
   const totalStars = totalStarsOf(stars);
 
@@ -120,7 +126,8 @@ export default function HomePage() {
             thumb={<PuzzleThumb kind="nonogram" />}
             title="노노그램"
             detail="숫자로 그림 완성"
-            badge={`${nonogramCleared.length}/${NONOGRAMS.length} 완료`}
+            badge={nonogramResume ? "이어 하기" : `레벨 ${nonogramLevel} · ${size(nonogramSizeForLevel(nonogramLevel))}`}
+            resume={nonogramResume}
           />
           <Tile
             to="/special/escape"
@@ -128,7 +135,8 @@ export default function HomePage() {
             thumb={<PuzzleThumb kind="escape" />}
             title="블록 탈출"
             detail="딸기 블록을 출구로"
-            badge={`${Object.keys(escapeBest).length}/${ESCAPES.length} 완료`}
+            badge={escapeResume ? "이어 하기" : `레벨 ${escapeLevel} · 최소 ${escapeForLevel(escapeLevel).minMoves}수`}
+            resume={escapeResume}
           />
         </Box>
         <Box sx={{ height: 12 }} />

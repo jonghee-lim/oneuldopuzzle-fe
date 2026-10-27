@@ -1,10 +1,10 @@
-// 퍼즐 모음: 시작 화면에서 들어가 노노그램·블록 탈출 1단계와 색깔 구역·슬라이딩·블록 채우기 레벨 1을 터치로만 끝까지 풉니다.
+// 퍼즐 모음: 시작 화면에서 들어가 노노그램·블록 탈출과 색깔 구역·슬라이딩·블록 채우기 레벨 1을 터치로만 끝까지 풉니다.
 // 사용: node --experimental-strip-types tests/e2e/special.mjs [스크린샷 폴더]  (BASE_URL, CHROME_PATH 선택)
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
-import { NONOGRAMS } from "../../src/puzzle/nonogram/puzzles.ts";
+import { nonogramForLevel, nonogramSizeForLevel } from "../../src/puzzle/nonogram/generator.ts";
 import { pictureGrid } from "../../src/puzzle/nonogram/rules.ts";
-import { ESCAPES } from "../../src/puzzle/escape/puzzles.ts";
+import { escapeForLevel } from "../../src/puzzle/escape/levels.ts";
 import { solveEscape } from "../../src/puzzle/escape/solver.ts";
 import { ESCAPE_SIZE, parseBoard } from "../../src/puzzle/escape/rules.ts";
 import { slideFrom } from "../../src/puzzle/sliding/rules.ts";
@@ -24,24 +24,27 @@ await page.goto(BASE);
 if (shots) await page.screenshot({ path: `${shots}/s0-home.png`, fullPage: true });
 await page.getByRole("navigation", { name: "퍼즐 고르기" }).getByRole("link", { name: /노노그램/ }).tap();
 await page.getByRole("grid", { name: /노노그램 판/ }).waitFor();
-const grid = pictureGrid(NONOGRAMS[0]);
+const grid = pictureGrid(nonogramForLevel(1));
 const cells = page.getByRole("gridcell");
 await page.getByRole("button", { name: "X 표시" }).tap();
 await cells.nth(grid.indexOf(0)).tap();
 await page.getByRole("button", { name: "칠하기" }).tap();
 for (let i = 0; i < grid.length; i += 1) if (grid[i] === 1) await cells.nth(i).tap();
-await page.getByRole("heading", { name: `${NONOGRAMS[0].name} 완성!` }).waitFor();
+await page.getByRole("heading", { name: `${nonogramForLevel(1).name} 완성!` }).waitFor();
 if (shots) await page.screenshot({ path: `${shots}/s1-nonogram.png` });
-await page.getByRole("button", { name: "다음 단계" }).tap();
-await page.getByRole("grid", { name: "노노그램 판 10×10" }).waitFor();
+await page.getByRole("button", { name: "다음 레벨" }).tap();
+await page.getByRole("heading", { name: "레벨 2" }).waitFor();
+const n2 = nonogramSizeForLevel(2);
+await page.getByRole("grid", { name: `노노그램 판 ${n2}×${n2}` }).waitFor();
 if (shots) await page.screenshot({ path: `${shots}/s2-nonogram10.png` });
 
 // 블록 탈출
 await page.goto(BASE);
 await page.getByRole("navigation", { name: "퍼즐 고르기" }).getByRole("link", { name: /블록 탈출/ }).tap();
 await page.getByRole("grid", { name: "블록 탈출 판" }).waitFor();
-const solved = solveEscape(ESCAPES[0].board);
-let blocks = parseBoard(ESCAPES[0].board);
+const solved = solveEscape(escapeForLevel(1).board);
+assert.equal(solved.minMoves, escapeForLevel(1).minMoves);
+let blocks = parseBoard(escapeForLevel(1).board);
 for (const [id, pos] of solved.moves) {
   await page.getByRole("button", { name: new RegExp(`^${id === "X" ? "딸기 블록" : `블록 ${id}`},`) }).tap();
   const b = blocks.find((x) => x.id === id);
@@ -55,12 +58,12 @@ for (const [id, pos] of solved.moves) {
 await page.getByRole("heading", { name: "탈출 성공!" }).waitFor();
 if (shots) await page.screenshot({ path: `${shots}/s4-escape-clear.png` });
 
-// 블록 탈출 쓸기: 1단계 첫 수를 블록을 쓸어서 두고, 판 위에서 쓸어도 페이지가 움직이지 않는다
-await page.goto(`${BASE}/special/escape?stage=0`);
-await page.getByRole("grid", { name: "블록 탈출 판" }).waitFor();
+// 블록 탈출 쓸기: 다음 레벨 첫 수를 블록을 쓸어서 두고, 판 위에서 쓸어도 페이지가 움직이지 않는다
+await page.getByRole("button", { name: "다음 레벨" }).tap();
+await page.getByRole("heading", { name: "레벨 2" }).waitFor();
 {
-  const [id, pos] = solved.moves[0];
-  const b = parseBoard(ESCAPES[0].board).find((x) => x.id === id);
+  const [id, pos] = solveEscape(escapeForLevel(2).board).moves[0];
+  const b = parseBoard(escapeForLevel(2).board).find((x) => x.id === id);
   const cur = b.horizontal ? b.col : b.row;
   const el = page.getByRole("button", { name: new RegExp(`^${id === "X" ? "딸기 블록" : `블록 ${id}`},`) });
   const box = await el.boundingBox();
@@ -148,17 +151,24 @@ const st = await page.evaluate(() => JSON.parse(localStorage.getItem("oneuldopuz
 assert.equal(st.zoneCleared, 1);
 assert.equal(st.slideCleared, 1);
 assert.equal(st.blockCleared, 1);
-assert.deepEqual(st.nonogramCleared, [0]);
-assert.ok(st.escapeBest[0] >= ESCAPES[0].minMoves);
-for (const k of ["zones:1", "sliding:1", "blocks:1", "nonogram:0", "escape:0"]) assert.ok(st.stars[k] >= 1, k);
+assert.equal(st.nonogramCleared, 1);
+assert.equal(st.escapeCleared, 1);
+assert.ok(st.escapeBest[1] >= escapeForLevel(1).minMoves);
+// 다음 레벨 판은 이어 하기로 남는다
+assert.equal(st.nonogramGame.level, 2);
+assert.equal(st.escapeGame.level, 2);
+assert.equal(st.escapeGame.moves, 1);
+for (const k of ["zones:1", "sliding:1", "blocks:1", "nonogram:1", "escape:1"]) assert.ok(st.stars[k] >= 1, k);
 // 별 6개마다 디저트가 열리고 힌트 1개(처음 3개, 이 시험에선 힌트를 쓰지 않음)
 const totalStars = Object.values(st.stars).reduce((a, b) => a + b, 0);
 assert.equal(st.hints, 3 + Math.floor(totalStars / 6));
 if (shots) await page.screenshot({ path: `${shots}/s7-records.png`, fullPage: true });
 await page.goto(BASE);
 if (shots) await page.screenshot({ path: `${shots}/s8-home-after.png`, fullPage: true });
+await page.getByRole("navigation", { name: "퍼즐 고르기" }).getByRole("link", { name: /블록 탈출.*이어 하기/ }).waitFor();
 
-// 예전 저장본(버전 2, 점수)은 깬 레벨마다 별 1개로 옮긴다
+// 예전 저장본(버전 2, 점수)은 깬 레벨마다 별 1개로 옮기고(버전 3),
+// 노노그램·블록 탈출 단계는 1단계부터 이어서 푼 만큼을 깬 레벨로, 단계 별은 다른 이름으로 남긴다(버전 4)
 await page.evaluate(() =>
   localStorage.setItem(
     "oneuldopuzzle-v1",
@@ -168,8 +178,10 @@ await page.evaluate(() =>
 await page.goto(`${BASE}/desserts`);
 await page.getByRole("heading", { name: "디저트 도감" }).waitFor();
 const migrated = await page.evaluate(() => JSON.parse(localStorage.getItem("oneuldopuzzle-v1")));
-assert.equal(migrated.version, 3);
-assert.deepEqual(migrated.state.stars, { "sudoku:easy:1": 1, "sudoku:easy:2": 1, "zones:1": 1, "nonogram:0": 1, "escape:1": 1 });
+assert.equal(migrated.version, 4);
+assert.deepEqual(migrated.state.stars, { "sudoku:easy:1": 1, "sudoku:easy:2": 1, "zones:1": 1, "nonogram-old:0": 1, "escape-old:1": 1 });
+assert.equal(migrated.state.nonogramCleared, 1);
+assert.equal(migrated.state.escapeCleared, 0);
 assert.equal(migrated.state.score, undefined);
 
 assert.deepEqual(errors, []);

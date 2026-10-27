@@ -4,6 +4,10 @@ import { ESCAPE_SIZE, formatBoard, isEscaped, moveBlock, parseBoard, reachablePo
 import { solveEscape } from "./solver.ts";
 
 export interface EscapeGame {
+  /** 레벨 번호(끝없는 레벨, 2026-10-27). 0이면 레벨 밖 판(시험용) */
+  level: number;
+  /** 검사기가 구한 가장 적은 이동 수(별 조건) */
+  minMoves: number;
   blocks: Block[];
   start: Block[];
   selected: string | null;
@@ -14,9 +18,9 @@ export interface EscapeGame {
   usedHint?: boolean;
 }
 
-export function newEscapeGame(board: string): EscapeGame {
+export function newEscapeGame(board: string, level = 0, minMoves = solveEscape(board)?.minMoves ?? 0): EscapeGame {
   const blocks = parseBoard(board);
-  return { blocks, start: blocks, selected: null, moves: 0, history: [], escaped: false };
+  return { level, minMoves, blocks, start: blocks, selected: null, moves: 0, history: [], escaped: false };
 }
 
 /** 고른 블록이 갈 수 있는 칸(칸 번호 → 그 칸을 누르면 옮길 위치) */

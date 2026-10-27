@@ -1,23 +1,21 @@
 import RestartAltIcon from "@mui/icons-material/RestartAlt";
 import UndoIcon from "@mui/icons-material/Undo";
 import { Box, ButtonBase, Typography } from "@mui/material";
-import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
 import DessertArt from "../components/dessert/DessertArt";
 import Page from "../components/layout/Page";
 import PuzzleHeader from "../components/layout/PuzzleHeader";
 import ClearDialog from "../components/puzzle/ClearDialog";
 import ConfirmRestart from "../components/puzzle/ConfirmRestart";
 import PuzzleBoard from "../components/puzzle/PuzzleBoard";
-import StageTabs from "../components/puzzle/StageTabs";
 import ToolButton from "../components/puzzle/ToolButton";
 import { useHint } from "../components/puzzle/useHint";
 import { cue } from "../platform/feedback";
-import { applyEscapeHint, findEscapeHint, newEscapeGame, restartEscape, swipeBlock, tapBlock, tapEscapeCell, targetCells, undoEscape } from "../puzzle/escape/game";
+import { applyEscapeHint, findEscapeHint, restartEscape, swipeBlock, tapBlock, tapEscapeCell, targetCells, undoEscape } from "../puzzle/escape/game";
 import type { Block } from "../puzzle/escape/rules";
 import { useSwipe, type Swipe } from "../components/puzzle/useSwipe";
 import type { ReactNode } from "react";
-import { ESCAPES } from "../puzzle/escape/puzzles";
+import type { EscapeGame } from "../puzzle/escape/game";
 import { ESCAPE_SIZE, EXIT_ROW, TARGET_ID } from "../puzzle/escape/rules";
 import { usePuzzleStore } from "../stores/puzzleStore";
 import { dessert } from "../theme/palette";
@@ -26,29 +24,35 @@ import { radius } from "../theme/shape";
 // 다른 블록은 디저트 색을 돌려 가며 칠하고, 딸기 블록만 진한 딸기색입니다.
 const BLOCK_COLORS = ["#BFE8D9", "#F4D9A8", "#F8C8D4", "#D8CFF0", "#C9E4F2", "#F7DE8F"];
 
+/** 블록 탈출(끝없는 레벨, 2026-10-27): 레벨마다 최소 이동 수가 조금씩 늘어납니다. */
 export default function EscapePage() {
-  const [params, setParams] = useSearchParams();
-  const stage = Math.min(Math.max(Number(params.get("stage") ?? 0) || 0, 0), ESCAPES.length - 1);
-  return <EscapeStage key={stage} stage={stage} onStage={(s) => setParams({ stage: String(s) }, { replace: true })} />;
+  const game = usePuzzleStore((s) => s.escapeGame);
+  const escapeCleared = usePuzzleStore((s) => s.escapeCleared);
+  const startEscape = usePuzzleStore((s) => s.startEscape);
+  useEffect(() => {
+    const current = usePuzzleStore.getState().escapeGame;
+    if (!current || (!current.escaped && current.level !== escapeCleared + 1)) startEscape();
+  }, [escapeCleared, startEscape]);
+  if (!game) return null;
+  return <EscapeLevel game={game} />;
 }
 
-function EscapeStage({ stage, onStage }: { stage: number; onStage: (stage: number) => void }) {
-  const puzzle = ESCAPES[stage];
-  const [game, setGame] = useState(() => newEscapeGame(puzzle.board));
+function EscapeLevel({ game }: { game: EscapeGame }) {
+  const setGame = usePuzzleStore((s) => s.updateEscape);
+  const startEscape = usePuzzleStore((s) => s.startEscape);
   const [confirm, setConfirm] = useState(false);
   const hint = useHint();
   const targets = useMemo(() => targetCells(game), [game]);
   const cellPct = 100 / ESCAPE_SIZE;
   const escapeBest = usePuzzleStore((s) => s.escapeBest);
-  const clearEscape = usePuzzleStore((s) => s.clearEscape);
   const lastStars = usePuzzleStore((s) => s.lastStars);
-  const best = escapeBest[stage];
+  const best = escapeBest[game.level];
+  // 이미 풀린 판을 다시 열 때는 소리를 내지 않습니다.
+  const wasEscaped = useRef(game.escaped);
   useEffect(() => {
-    if (game.escaped) {
-      clearEscape(stage, game.moves, puzzle.minMoves, !!game.usedHint);
-      cue("clear");
-    }
-  }, [game.escaped, game.moves, game.usedHint, stage, puzzle.minMoves, clearEscape]);
+    if (game.escaped && !wasEscaped.current) cue("clear");
+    wasEscaped.current = game.escaped;
+  }, [game.escaped]);
 
   const blocks = (
     <Box sx={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
@@ -105,10 +109,7 @@ function EscapeStage({ stage, onStage }: { stage: number; onStage: (stage: numbe
 
   return (
     <Page>
-      <PuzzleHeader title="블록 탈출" subtitle={`스페셜 스테이지 · ${puzzle.name}`} right={<span aria-label="이동 수">{game.moves}수</span>} />
-      <Box sx={{ px: 1.5, pt: 1 }}>
-        <StageTabs stages={ESCAPES.map((_, i) => `${i + 1}단계`)} done={ESCAPES.map((_, i) => escapeBest[i] !== undefined)} value={stage} onChange={onStage} />
-      </Box>
+      <PuzzleHeader title={`레벨 ${game.level}`} subtitle={`블록 탈출 · 최소 ${game.minMoves}수`} right={<span aria-label="이동 수">{game.moves}수</span>} />
       <Box sx={{ px: 1.5, pt: 2 }}>
         <PuzzleBoard
           size={ESCAPE_SIZE}
@@ -127,7 +128,7 @@ function EscapeStage({ stage, onStage }: { stage: number; onStage: (stage: numbe
       </Box>
       <Box aria-live="polite" sx={{ px: 2, pt: 1.5, minHeight: 44, textAlign: "center" }}>
         <Typography sx={{ fontSize: 14, color: "text.secondary" }}>
-          {game.selected ? "초록 점이 있는 칸을 누르거나 블록을 쓸면 그쪽으로 밀려요." : `블록을 쓸거나 눌러서 옮기세요. 딸기 블록을 오른쪽 출구로 보내면 성공이에요. 최소 ${puzzle.minMoves}수${best !== undefined ? ` · 내 기록 ${best}수` : ""}.`}
+          {game.selected ? "초록 점이 있는 칸을 누르거나 블록을 쓸면 그쪽으로 밀려요." : `블록을 쓸거나 눌러서 옮기세요. 딸기 블록을 오른쪽 출구로 보내면 성공이에요. 최소 ${game.minMoves}수${best !== undefined ? ` · 내 기록 ${best}수` : ""}.`}
         </Typography>
       </Box>
       <Box sx={{ px: 1.5, pt: 1, display: "flex", gap: 1 }}>
@@ -156,10 +157,10 @@ function EscapeStage({ stage, onStage }: { stage: number; onStage: (stage: numbe
         open={game.escaped}
         art={<DessertArt id="cake" size={96} />}
         title="탈출 성공!"
-        detail={`${game.moves}수 만에 나왔어요 · 최소 ${puzzle.minMoves}수`}
-        nextLabel="다음 단계"
+        detail={`${game.moves}수 만에 나왔어요 · 최소 ${game.minMoves}수`}
+        nextLabel="다음 레벨"
         stars={lastStars}
-        onNext={stage < ESCAPES.length - 1 ? () => onStage(stage + 1) : undefined}
+        onNext={() => startEscape()}
       />
       {hint.toast}
     </Page>

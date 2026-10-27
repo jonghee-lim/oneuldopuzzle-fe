@@ -1,5 +1,5 @@
-// 스페셜 스테이지 블록 탈출. tools/make-escape.ts로 만든 후보 중 이동 수가 단계에 맞는 판을 골랐고,
-// 검사기로 풀 수 있는지·최소 이동 수를 확인합니다(tests/escape.test.ts).
+// 블록 탈출 첫 3단계 판(끝없는 레벨 전, 2026-10-25). 지금은 레벨 표(levels.ts)를 쓰고, 이 판들은 조작·힌트 시험에 씁니다.
+// tools/make-escape.ts로 만든 후보에서 골랐고 검사기로 최소 이동 수를 확인합니다(tests/escape.test.ts).
 export interface EscapePuzzle {
   id: string;
   name: string;

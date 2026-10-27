@@ -11,6 +11,10 @@ import { slideForLevel } from "../puzzle/sliding/generator";
 import { newSlideGame, type SlideGame } from "../puzzle/sliding/game";
 import { difficultyForLevel, puzzleForLevel, type SudokuDifficulty } from "../puzzle/sudoku/generator";
 import { hasProgress, newGame, type InputMode, type SudokuGame } from "../puzzle/sudoku/game";
+import { escapeForLevel } from "../puzzle/escape/levels";
+import { newEscapeGame, type EscapeGame } from "../puzzle/escape/game";
+import { nonogramForLevel } from "../puzzle/nonogram/generator";
+import { newNonogramGame, type NonogramGame } from "../puzzle/nonogram/game";
 import { zonesForLevel } from "../puzzle/zones/generator";
 import { newZoneGame, type ZoneGame } from "../puzzle/zones/game";
 
@@ -67,9 +71,12 @@ interface PuzzleState {
   /** 블록 채우기 */
   blockCleared: number;
   blockGame: BlockGame | null;
-  /** 스페셜 체험: 다 푼 노노그램 단계 */
-  nonogramCleared: number[];
-  /** 스페셜 체험: 블록 탈출 단계별 가장 적은 이동 수 */
+  /** 노노그램(끝없는 레벨, 2026-10-27) */
+  nonogramCleared: number;
+  nonogramGame: NonogramGame | null;
+  /** 블록 탈출(끝없는 레벨, 2026-10-27): 깬 레벨과 레벨별 가장 적은 이동 수 */
+  escapeCleared: number;
+  escapeGame: EscapeGame | null;
   escapeBest: Record<number, number>;
   /** 남은 힌트 수 */
   hints: number;
@@ -97,8 +104,10 @@ interface PuzzleState {
   updateSlide: (update: (game: SlideGame) => SlideGame) => void;
   startBlocks: () => BlockGame;
   updateBlocks: (update: (game: BlockGame) => BlockGame) => void;
-  clearNonogram: (stage: number, mistakes: number, helped: boolean) => void;
-  clearEscape: (stage: number, moves: number, minMoves: number, helped: boolean) => void;
+  startNonogram: () => NonogramGame;
+  updateNonogram: (update: (game: NonogramGame) => NonogramGame) => void;
+  startEscape: () => EscapeGame;
+  updateEscape: (update: (game: EscapeGame) => EscapeGame) => void;
   /** 힌트 하나를 씁니다. 남은 힌트가 없으면 false */
   spendHint: () => boolean;
   /** 날짜가 바뀌었으면 오늘의 퍼즐을 새로 준비합니다. */
@@ -201,7 +210,10 @@ export const usePuzzleStore = create<PuzzleState>()(
       slideGame: null,
       blockCleared: 0,
       blockGame: null,
-      nonogramCleared: [],
+      nonogramCleared: 0,
+      nonogramGame: null,
+      escapeCleared: 0,
+      escapeGame: null,
       escapeBest: {},
       hints: HINT_START,
       dailyDate: null,
@@ -325,21 +337,56 @@ export const usePuzzleStore = create<PuzzleState>()(
         }
         set({ blockGame });
       },
-      clearNonogram: (stage, mistakes, helped) => {
-        const first = !get().nonogramCleared.includes(stage);
-        const lines = nonogramStars(mistakes, helped);
-        set({
-          nonogramCleared: first ? [...get().nonogramCleared, stage] : get().nonogramCleared,
-          ...gainStars(get(), starKey.nonogram(stage), lines),
-        });
+      startNonogram: () => {
+        const level = get().nonogramCleared + 1;
+        const current = get().nonogramGame;
+        if (current && current.level === level && !current.solved) return current;
+        const nonogramGame = newNonogramGame(nonogramForLevel(level), level);
+        set({ nonogramGame });
+        return nonogramGame;
       },
-      clearEscape: (stage, moves, minMoves, helped) => {
-        const best = get().escapeBest[stage];
-        const lines = escapeStars(moves, minMoves, helped);
-        set({
-          escapeBest: best === undefined || moves < best ? { ...get().escapeBest, [stage]: moves } : get().escapeBest,
-          ...gainStars(get(), starKey.escape(stage), lines),
-        });
+      updateNonogram: (update) => {
+        const before = get().nonogramGame;
+        if (!before) return;
+        const nonogramGame = update(before);
+        if (nonogramGame === before) return;
+        if (nonogramGame.solved && !before.solved) {
+          const lines = nonogramStars(nonogramGame.mistakes ?? 0, !!nonogramGame.usedHint);
+          set({
+            nonogramGame,
+            nonogramCleared: Math.max(get().nonogramCleared, nonogramGame.level),
+            ...gainStars(get(), starKey.nonogram(nonogramGame.level), lines),
+          });
+          return;
+        }
+        set({ nonogramGame });
+      },
+      startEscape: () => {
+        const level = get().escapeCleared + 1;
+        const current = get().escapeGame;
+        if (current && current.level === level && !current.escaped) return current;
+        const { board, minMoves } = escapeForLevel(level);
+        const escapeGame = newEscapeGame(board, level, minMoves);
+        set({ escapeGame });
+        return escapeGame;
+      },
+      updateEscape: (update) => {
+        const before = get().escapeGame;
+        if (!before) return;
+        const escapeGame = update(before);
+        if (escapeGame === before) return;
+        if (escapeGame.escaped && !before.escaped) {
+          const best = get().escapeBest[escapeGame.level];
+          const lines = escapeStars(escapeGame.moves, escapeGame.minMoves, !!escapeGame.usedHint);
+          set({
+            escapeGame,
+            escapeCleared: Math.max(get().escapeCleared, escapeGame.level),
+            escapeBest: best === undefined || escapeGame.moves < best ? { ...get().escapeBest, [escapeGame.level]: escapeGame.moves } : get().escapeBest,
+            ...gainStars(get(), starKey.escape(escapeGame.level), lines),
+          });
+          return;
+        }
+        set({ escapeGame });
       },
 
       spendHint: () => {
@@ -392,10 +439,10 @@ export const usePuzzleStore = create<PuzzleState>()(
     },
     {
       name: "oneuldopuzzle-v1",
-      version: 3,
+      version: 4,
       // 버전 1은 모든 난이도가 레벨 하나를 같이 썼습니다. 깬 레벨은 그때 고른 난이도의 레벨로 옮깁니다.
       migrate: (persisted, version) => {
-        let p = (persisted ?? {}) as Partial<PuzzleState> & { clearedLevel?: number; score?: number; lastScore?: unknown };
+        let p = (persisted ?? {}) as Omit<Partial<PuzzleState>, "nonogramCleared"> & { nonogramCleared?: number | number[]; clearedLevel?: number; score?: number; lastScore?: unknown };
         // 버전 1은 모든 난이도가 레벨 하나를 같이 썼습니다. 깬 레벨은 그때 고른 난이도의 레벨로 옮깁니다.
         if (version < 2) {
           const cleared = p.clearedLevel ?? 0;
@@ -410,11 +457,28 @@ export const usePuzzleStore = create<PuzzleState>()(
           for (let l = 1; l <= (p.zoneCleared ?? 0); l += 1) stars[starKey.zones(l)] = 1;
           for (let l = 1; l <= (p.blockCleared ?? 0); l += 1) stars[starKey.blocks(l)] = 1;
           for (let l = 1; l <= (p.slideCleared ?? 0); l += 1) stars[starKey.sliding(l)] = 1;
-          for (const st of p.nonogramCleared ?? []) stars[starKey.nonogram(st)] = 1;
+          for (const st of Array.isArray(p.nonogramCleared) ? p.nonogramCleared : []) stars[starKey.nonogram(st)] = 1;
           for (const st of Object.keys(p.escapeBest ?? {})) stars[starKey.escape(Number(st))] = 1;
           p = { ...p, stars, treats: {} };
           delete p.score;
           delete p.lastScore;
+        }
+        // 버전 4는 노노그램·블록 탈출이 끝없는 레벨(예전엔 3단계씩). 1단계부터 이어서 푼 만큼을 깬 레벨로 치고,
+        // 예전 단계의 별은 다른 이름으로 남겨 모은 별 수(도감)가 줄지 않게 합니다.
+        if (version < 4) {
+          const oldNonogram = Array.isArray(p.nonogramCleared) ? p.nonogramCleared : [];
+          const oldEscape = Object.keys(p.escapeBest ?? {}).map(Number);
+          const streak = (done: number[]) => {
+            let n = 0;
+            while (done.includes(n)) n += 1;
+            return n;
+          };
+          const stars: Record<string, number> = {};
+          for (const [k, v] of Object.entries(p.stars ?? {})) {
+            const [kind, stage] = k.split(":");
+            stars[kind === "nonogram" || kind === "escape" ? `${kind}-old:${stage}` : k] = v;
+          }
+          p = { ...p, stars, nonogramCleared: streak(oldNonogram), escapeCleared: streak(oldEscape), escapeBest: {} };
         }
         return p as never;
       },
@@ -438,6 +502,9 @@ export const usePuzzleStore = create<PuzzleState>()(
         blockCleared: s.blockCleared,
         blockGame: s.blockGame ? { ...s.blockGame, history: [] } : null,
         nonogramCleared: s.nonogramCleared,
+        nonogramGame: s.nonogramGame ? { ...s.nonogramGame, history: [] } : null,
+        escapeCleared: s.escapeCleared,
+        escapeGame: s.escapeGame ? { ...s.escapeGame, history: [], selected: null } : null,
         escapeBest: s.escapeBest,
         stars: s.stars,
         treats: s.treats,
