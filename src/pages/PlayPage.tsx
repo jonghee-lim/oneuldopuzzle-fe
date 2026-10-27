@@ -20,7 +20,7 @@ import { DIFFICULTY_LABEL } from "../puzzle/sudoku/generator";
 import {
   applyHint, autoNotes, conflictsOf, deadCells, findHint, digitCounts, sudokuHintSteps, erase, newlyCompletedCells, formatTime, isFilledButWrong, isGiven, restart, tapCell, tapNumber, tick, toggleMemo, undo, wrongCells,
 } from "../puzzle/sudoku/game";
-import { boxOf } from "../puzzle/sudoku/rules";
+import { shapeOf } from "../puzzle/sudoku/rules";
 import { sudokuNext, usePuzzleStore } from "../stores/puzzleStore";
 import { useIsDaily } from "../components/daily/daily";
 import { useDailyClear } from "../components/daily/useDailyClear";
@@ -38,7 +38,7 @@ const HINT_REASON = {
   answer: "단서로 찾기 어려운 칸이라 답을 넣었어요.",
 } as const;
 
-const cellName = (index: number) => `${Math.floor(index / 9) + 1}행 ${(index % 9) + 1}열`;
+const cellName = (index: number, size: number) => `${Math.floor(index / size) + 1}행 ${(index % size) + 1}열`;
 
 export default function PlayPage() {
   const navigate = useNavigate();
@@ -52,7 +52,7 @@ export default function PlayPage() {
   const startDailySudoku = usePuzzleStore((s) => s.startDailySudoku);
   const read = () => (daily ? usePuzzleStore.getState().dailySudoku : usePuzzleStore.getState().game);
   // 시계가 돌 때마다 판 객체가 바뀌므로, 놓인 내용이 바뀔 때만 힌트 단계를 처음부터 셉니다.
-  const hint = useHint(game?.values.join(","), 9);
+  const hint = useHint(game?.values.join(","), game ? shapeOf(game.values).size : 9);
   const dailyClear = useDailyClear(game?.elapsedSeconds ?? 0);
   const [confirmRestart, setConfirmRestart] = useState(false);
   const lastStars = usePuzzleStore((s) => s.lastStars);
@@ -110,6 +110,9 @@ export default function PlayPage() {
 
   if (!game) return null;
 
+  // 미니 6×6(상자 2×3)과 클래식 9×9를 판 크기로 가릅니다.
+  const shape = shapeOf(game.values);
+  const { size } = shape;
   const mode = settings.inputMode;
   const selected = game.selected;
   const focusDigit = mode === "number-first" ? game.activeNumber : selected !== null ? game.values[selected] : 0;
@@ -122,7 +125,7 @@ export default function PlayPage() {
     if (settings.highlightSame && focusDigit && game.values[index] === focusDigit) return dessert.mint;
     if (
       selected !== null &&
-      (Math.floor(index / 9) === Math.floor(selected / 9) || index % 9 === selected % 9 || boxOf(index) === boxOf(selected))
+      (Math.floor(index / size) === Math.floor(selected / size) || index % size === selected % size || shape.boxOf(index) === shape.boxOf(selected))
     ) {
       return dessert.creamDeep;
     }
@@ -155,16 +158,16 @@ export default function PlayPage() {
       <Box sx={{ px: 1.5, pt: 1 }}>
         <PuzzleBoard
           focus={hint.focus}
-          size={9}
-          label="스도쿠 판"
+          size={size}
+          label={size === 9 ? "스도쿠 판" : `스도쿠 판 ${size}×${size}`}
           onCellTap={(index) => act((g) => tapCell(g, index, mode))}
           cellLabel={(index) => {
-            const r = Math.floor(index / 9) + 1;
-            const c = (index % 9) + 1;
+            const r = Math.floor(index / size) + 1;
+            const c = (index % size) + 1;
             const v = game.values[index];
             return `${r}행 ${c}열 ${v ? `${v}${isGiven(game, index) ? " (처음 숫자)" : ""}` : "빈칸"}`;
           }}
-          thickEdges={(index) => ({ top: Math.floor(index / 9) % 3 === 0, left: (index % 9) % 3 === 0 })}
+          thickEdges={(index) => ({ top: Math.floor(index / size) % shape.boxRows === 0, left: (index % size) % shape.boxCols === 0 })}
           cellColor={cellBackground}
           renderCell={(index) => (
             <>
@@ -174,6 +177,7 @@ export default function PlayPage() {
               <SudokuCellContent
                 value={game.values[index]}
                 notes={game.notes[index]}
+                size={size}
                 given={isGiven(game, index)}
                 conflict={(conflicts.has(index) || wrong.has(index)) && !isGiven(game, index)}
               />
@@ -218,7 +222,7 @@ export default function PlayPage() {
             () => findHint(game),
             (h) => sudokuHintSteps(game, h),
             (h) => act((g) => applyHint(g, h)),
-            (h) => (h.kind === "wrong" ? `${cellName(h.index)} 숫자가 틀려서 지웠어요.` : `${cellName(h.index)}에 ${h.digit}: ${h.reason === "technique" ? `'${TECHNIQUE_NAME[h.via.technique]}' 기술로 후보를 지워 찾았어요.` : HINT_REASON[h.reason]}`),
+            (h) => (h.kind === "wrong" ? `${cellName(h.index, size)} 숫자가 틀려서 지웠어요.` : `${cellName(h.index, size)}에 ${h.digit}: ${h.reason === "technique" ? `'${TECHNIQUE_NAME[h.via.technique]}' 기술로 후보를 지워 찾았어요.` : HINT_REASON[h.reason]}`),
           ),
         )}
         <ToolButton label="되돌리기" onClick={() => act(undo)} icon={<UndoIcon sx={{ fontSize: 18 }} />} />
@@ -234,6 +238,7 @@ export default function PlayPage() {
       <Box sx={{ px: 1.5, mt: "auto" }}>
         <NumberPad
           counts={counts}
+          size={size}
           memoMode={game.memoMode}
           activeNumber={mode === "number-first" ? game.activeNumber : null}
           onNumber={(digit) => act((g) => tapNumber(g, digit, mode))}

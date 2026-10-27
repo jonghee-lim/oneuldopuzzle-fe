@@ -1,5 +1,5 @@
 // 문제 검사기가 쓰는 풀이기. 비트 마스크 + 후보가 가장 적은 칸부터 고르는 백트래킹입니다.
-import { ALL_DIGITS, CELLS, SIZE, boxOf, bitCount, type SudokuGrid } from "./rules.ts";
+import { bitCount, shapeOf, type SudokuGrid } from "./rules.ts";
 
 export interface SolveResult {
   /** 찾은 답 수(limit에서 멈춤). 0이면 풀 수 없음, 1이면 답이 하나, 2 이상이면 답이 여러 개. */
@@ -14,6 +14,7 @@ export interface SolveResult {
  */
 export function solve(grid: SudokuGrid, limit = 2, order?: readonly number[]): SolveResult {
   const cells = grid.slice();
+  const { size: SIZE, cells: CELLS, all: ALL_DIGITS, boxOf, digits: DIGITS } = shapeOf(grid);
   const rows = new Array<number>(SIZE).fill(0);
   const cols = new Array<number>(SIZE).fill(0);
   const boxes = new Array<number>(SIZE).fill(0);
@@ -32,7 +33,7 @@ export function solve(grid: SudokuGrid, limit = 2, order?: readonly number[]): S
     boxes[b] |= bit;
   }
 
-  const digits = order ?? [1, 2, 3, 4, 5, 6, 7, 8, 9];
+  const digits = order ?? DIGITS;
   let count = 0;
   let solution: SudokuGrid | undefined;
 

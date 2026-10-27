@@ -2,7 +2,7 @@
 // 입력 방식 두 가지(설계서): 칸 먼저 누르기(cell-first), 숫자 먼저 고르기(number-first).
 import { popHistory, pushHistory, type History } from "../core/history.ts";
 import type { HintStep } from "../core/hint.ts";
-import { CELLS, PEERS, UNITS, findConflicts, type SudokuGrid } from "./rules.ts";
+import { findConflicts, shapeOf, type Shape, type SudokuGrid } from "./rules.ts";
 import type { SudokuDifficulty } from "./generator.ts";
 import { TECHNIQUE_NAME, nextPlacement, type TechStep } from "./techniques.ts";
 
@@ -53,7 +53,7 @@ export function newGame(args: { id: string; level: number; difficulty: SudokuDif
   return {
     ...args,
     values: args.puzzle.slice(),
-    notes: new Array<number>(CELLS).fill(0),
+    notes: new Array<number>(args.puzzle.length).fill(0),
     selected: null,
     activeNumber: null,
     memoMode: false,
@@ -89,7 +89,7 @@ function placeValue(game: SudokuGame, index: number, digit: number): SudokuGame 
   const updates: Change[] = [{ index, value: digit, notes: 0 }];
   // 숫자를 넣으면 같은 줄·칸줄·상자 메모에서 그 숫자를 지웁니다.
   const bit = 1 << digit;
-  for (const peer of PEERS[index]) {
+  for (const peer of shapeOf(game.values).peers[index]) {
     if (game.notes[peer] & bit) updates.push({ index: peer, value: game.values[peer], notes: game.notes[peer] & ~bit });
   }
   return apply(game, updates);
@@ -128,10 +128,11 @@ export function tapNumber(game: SudokuGame, digit: number, mode: InputMode): Sud
 export function autoNotes(game: SudokuGame): SudokuGame {
   if (game.completed) return game;
   const updates: Change[] = [];
-  for (let index = 0; index < CELLS; index += 1) {
+  const { cells, peers, digits } = shapeOf(game.values);
+  for (let index = 0; index < cells; index += 1) {
     if (game.values[index] !== 0) continue;
     let notes = 0;
-    for (let d = 1; d <= 9; d += 1) if (!PEERS[index].some((p) => game.values[p] === d)) notes |= 1 << d;
+    for (const d of digits) if (!peers[index].some((p) => game.values[p] === d)) notes |= 1 << d;
     updates.push({ index, value: 0, notes });
   }
   return apply(game, updates);
@@ -167,10 +168,11 @@ export function findHint(game: SudokuGame): SudokuHint | null {
   const wrong = game.values.findIndex((v, i) => v !== 0 && v !== game.solution[i]);
   if (wrong >= 0) return { kind: "wrong", index: wrong };
   const cells = game.values;
+  const { cells: CELLS, peers: PEERS, units: UNITS, all, digits, size } = shapeOf(cells);
   const candidates = (i: number) => {
     let used = 0;
     for (const p of PEERS[i]) if (cells[p]) used |= 1 << cells[p];
-    return 0x3fe & ~used;
+    return all & ~used;
   };
   // 고른 칸 가까이부터 보면 지금 보고 있던 곳의 단서를 먼저 알려 줄 수 있지만, 순서가 흔들리지 않게 앞에서부터 찾습니다.
   for (let i = 0; i < CELLS; i += 1) {
@@ -180,10 +182,10 @@ export function findHint(game: SudokuGame): SudokuHint | null {
   }
   for (let u = 0; u < UNITS.length; u += 1) {
     const unit = UNITS[u];
-    for (let d = 1; d <= 9; d += 1) {
+    for (const d of digits) {
       if (unit.some((i) => cells[i] === d)) continue;
       const spots = unit.filter((i) => !cells[i] && candidates(i) & (1 << d));
-      if (spots.length === 1) return { kind: "place", index: spots[0], digit: d, reason: u < 9 ? "row" : u < 18 ? "col" : "box" };
+      if (spots.length === 1) return { kind: "place", index: spots[0], digit: d, reason: u < size ? "row" : u < 2 * size ? "col" : "box" };
     }
   }
   // 단서로 바로 못 찾으면 기술로 후보를 지워 가며 찾습니다(어려움·아주 어려움).
@@ -197,18 +199,22 @@ export function findHint(game: SudokuGame): SudokuHint | null {
 }
 
 const BOX_NAME = ["왼쪽 위", "가운데 위", "오른쪽 위", "왼쪽 가운데", "한가운데", "오른쪽 가운데", "왼쪽 아래", "가운데 아래", "오른쪽 아래"];
+/** 미니 6×6은 상자가 두 칸줄 × 세 줄 */
+const MINI_BOX_NAME = ["왼쪽 위", "오른쪽 위", "왼쪽 가운데", "오른쪽 가운데", "왼쪽 아래", "오른쪽 아래"];
 
 /** 숫자 뒤 조사: 받침 있는 숫자(0·1·3·6·7·8) 뒤에는 은·이 */
 const hasBatchim = (n: number | string) => "013678".includes(String(n).slice(-1));
 const topic = (n: number | string) => `${n}${hasBatchim(n) ? "은" : "는"}`;
 const subject = (n: number | string) => `${n}${hasBatchim(n) ? "이" : "가"}`;
 
-function unitName(u: number): string {
-  return u < 9 ? `${u + 1}번째 가로줄` : u < 18 ? `${u - 8}번째 세로줄` : `${BOX_NAME[u - 18]} 상자`;
+function unitNameOf(u: number, { size }: Shape): string {
+  const boxes = size === 9 ? BOX_NAME : MINI_BOX_NAME;
+  return u < size ? `${u + 1}번째 가로줄` : u < 2 * size ? `${u - size + 1}번째 세로줄` : `${boxes[u - 2 * size]} 상자`;
 }
 
 /** 기술마다 왜 후보를 지울 수 있는지 한 문장으로 */
-export function techniqueText(step: TechStep): string {
+export function techniqueText(step: TechStep, shape: Shape): string {
+  const unitName = (u: number) => unitNameOf(u, shape);
   const [a, b, c] = step.digits;
   const list = step.digits.join(", ");
   switch (step.technique) {
@@ -225,7 +231,7 @@ export function techniqueText(step: TechStep): string {
     case "xWing":
     case "swordfish": {
       const n = step.technique === "xWing" ? 2 : 3;
-      const rows = step.units[0] < 9;
+      const rows = step.units[0] < shape.size;
       return `${topic(a)} 표시한 ${n}개 ${rows ? "가로줄" : "세로줄"}에서 같은 ${n}개 ${rows ? "세로줄" : "가로줄"} 안에만 갈 수 있어요. 그래서 그 ${rows ? "세로줄" : "가로줄"}의 다른 칸에는 ${subject(a)} 못 와요.`;
     }
     case "xyWing":
@@ -240,9 +246,12 @@ export function sudokuHintSteps(game: SudokuGame, hint: SudokuHint): HintStep[] 
   const i = hint.index;
   if (hint.kind === "wrong") return [{ cells: [i], text: "표시한 칸의 숫자가 답과 달라요." }];
   const d = hint.digit;
-  const row = Math.floor(i / 9);
-  const col = i % 9;
-  const box = Math.floor(row / 3) * 3 + Math.floor(col / 3);
+  const shape = shapeOf(game.values);
+  const { size, peers: PEERS, units: UNITS } = shape;
+  const unitName = (u: number) => unitNameOf(u, shape);
+  const row = Math.floor(i / size);
+  const col = i % size;
+  const box = shape.boxOf(i);
   if (hint.reason === "only") {
     return [
       { cells: [i], text: "표시한 칸을 보세요. 같은 가로줄·세로줄·상자에 이미 있는 숫자를 지워 보세요." },
@@ -257,12 +266,12 @@ export function sudokuHintSteps(game: SudokuGame, hint: SudokuHint): HintStep[] 
         ? `후보를 지우고 나면 이 칸에는 ${d}만 남아요.`
         : `후보를 지우고 나면 ${unitName(hint.then.units[0])}에서 ${subject(d)} 갈 곳은 여기뿐이에요.`;
     return [
-      { cells: hint.via.cells, text: `${TECHNIQUE_NAME[hint.via.technique]}: ${techniqueText(hint.via)}` },
+      { cells: hint.via.cells, text: `${TECHNIQUE_NAME[hint.via.technique]}: ${techniqueText(hint.via, shape)}` },
       { cells: [i, ...removed.filter((k) => k !== i)], text: then },
     ];
   }
   const [unit, name] =
-    hint.reason === "row" ? [UNITS[row], `${row + 1}번째 가로줄`] : hint.reason === "col" ? [UNITS[9 + col], `${col + 1}번째 세로줄`] : [UNITS[18 + box], `${BOX_NAME[box]} 상자`];
+    hint.reason === "row" ? [UNITS[row], unitName(row)] : hint.reason === "col" ? [UNITS[size + col], unitName(size + col)] : [UNITS[2 * size + box], unitName(2 * size + box)];
   const same = game.values.flatMap((v, k) => (v === d ? [k] : []));
   return [
     { cells: [...unit], text: `${name}에서 ${d}의 자리를 찾아보세요.` },
@@ -294,7 +303,7 @@ export function isFilledButWrong(game: SudokuGame): boolean {
   return !game.completed && game.values.every(Boolean);
 }
 
-/** 숫자마다 판에 몇 개 놓였는지(9개 다 놓이면 패드에서 흐리게) */
+/** 숫자마다 판에 몇 개 놓였는지(한 숫자를 판 크기만큼 다 놓으면 패드에서 흐리게) */
 export function digitCounts(game: SudokuGame): number[] {
   const counts = new Array<number>(10).fill(0);
   for (const v of game.values) if (v) counts[v] += 1;
@@ -315,11 +324,12 @@ export function hasProgress(game: SudokuGame): boolean {
 /** 빈칸인데 같은 줄·칸줄·상자 숫자 때문에 넣을 수 있는 숫자가 하나도 없는 칸. 앞에서 넣은 숫자 중 틀린 것이 있다는 뜻입니다. */
 export function deadCells(game: SudokuGame): number[] {
   const dead: number[] = [];
+  const { peers, all } = shapeOf(game.values);
   game.values.forEach((v, i) => {
     if (v) return;
     let used = 0;
-    for (const p of PEERS[i]) used |= 1 << game.values[p];
-    if ((used & 0b1111111110) === 0b1111111110) dead.push(i);
+    for (const p of peers[i]) used |= 1 << game.values[p];
+    if ((used & all) === all) dead.push(i);
   });
   return dead;
 }
@@ -337,6 +347,6 @@ export function wrongCells(game: SudokuGame): number[] {
 export function newlyCompletedCells(before: SudokuGame, after: SudokuGame): number[] {
   const solved = (g: SudokuGame, unit: readonly number[]) => unit.every((i) => g.values[i] === g.solution[i]);
   const cells = new Set<number>();
-  for (const unit of UNITS) if (solved(after, unit) && !solved(before, unit)) unit.forEach((i) => cells.add(i));
+  for (const unit of shapeOf(after.values).units) if (solved(after, unit) && !solved(before, unit)) unit.forEach((i) => cells.add(i));
   return [...cells];
 }

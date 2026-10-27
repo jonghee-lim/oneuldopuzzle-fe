@@ -145,3 +145,22 @@ test("자동 메모: 빈칸마다 들어갈 수 있는 숫자를 모두 메모�
   assert.equal(a.usedHint, undefined);
   assert.deepEqual(undo(a).notes, g.notes);
 });
+
+test("미니 6×6 판: 자동 메모는 1~6만, 숫자 넣기·힌트로 끝까지 풀린다", async () => {
+  const { puzzleForLevel } = await import("../src/puzzle/sudoku/generator.ts");
+  const { autoNotes, applyHint, findHint, sudokuHintSteps, digitCounts } = await import("../src/puzzle/sudoku/game.ts");
+  const p = puzzleForLevel(2, "mini");
+  let g = newGame({ id: p.id, level: 2, difficulty: "mini", puzzle: p.puzzle, solution: p.solution });
+  assert.equal(g.notes.length, 36);
+  const noted = autoNotes(g);
+  assert.ok(noted.notes.every((m) => (m & ~0b1111110) === 0), "7~9는 메모하지 않음");
+  for (let n = 0; n < 40 && !g.completed; n += 1) {
+    const h = findHint(g)!;
+    assert.notEqual(h.kind === "place" && h.reason, "answer");
+    const steps = sudokuHintSteps(g, h);
+    assert.ok(steps.every((s) => !s.text.includes("undefined")));
+    g = applyHint(g, h);
+  }
+  assert.ok(g.completed);
+  assert.deepEqual(digitCounts(g).slice(1, 7), [6, 6, 6, 6, 6, 6]);
+});

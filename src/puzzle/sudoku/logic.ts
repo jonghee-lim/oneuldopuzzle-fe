@@ -1,6 +1,6 @@
 // 사람이 푸는 방식(단서 찾기)으로만 풀리는지 확인합니다. 난이도를 매길 때 씁니다.
 // 쉬움·보통 문제는 '이 칸엔 이 숫자밖에 없다'와 '이 줄에서 이 숫자는 여기밖에 못 간다' 두 가지만으로 풀려야 합니다.
-import { ALL_DIGITS, CELLS, PEERS, UNITS, bitCount, type SudokuGrid } from "./rules.ts";
+import { bitCount, shapeOf, type SudokuGrid } from "./rules.ts";
 
 export interface LogicResult {
   solved: boolean;
@@ -11,6 +11,7 @@ export interface LogicResult {
 
 export function solveWithSingles(grid: SudokuGrid): LogicResult {
   const cells = grid.slice();
+  const { cells: CELLS, peers: PEERS, units: UNITS, all: ALL_DIGITS, size } = shapeOf(grid);
   const candidates = (i: number) => {
     let used = 0;
     for (const p of PEERS[i]) if (cells[p]) used |= 1 << cells[p];
@@ -37,7 +38,7 @@ export function solveWithSingles(grid: SudokuGrid): LogicResult {
 
     // 2) 한 묶음에서 이 숫자가 갈 수 있는 칸이 하나뿐인 경우
     for (const unit of UNITS) {
-      for (let d = 1; d <= 9; d += 1) {
+      for (let d = 1; d <= size; d += 1) {
         if (unit.some((i) => cells[i] === d)) continue;
         const spots = unit.filter((i) => !cells[i] && candidates(i) & (1 << d));
         if (spots.length === 1) {
