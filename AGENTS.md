@@ -7,6 +7,7 @@
 - 문제를 바꾸면 `npm test`와 `npm run check:pool -- 1000`을 함께 돌린다. 화면을 바꾸면 `npm run test:e2e`(320px 좁은 화면에서 가로로 넘치지 않는지도 `narrow.mjs`가 본다: 넘치면 iOS가 화면을 줄였다 키워 판이 커졌다 작아져 보임, 2026-10-27 신고). 상태에 따라 버튼 이름 길이를 바꾸지 않는다.
 - 화면·컴포넌트는 공유 패키지를 직접 import하지 않고 `src/theme` 같은 얇은 파일을 거친다(eslint로 막음).
 - 별 규칙은 `src/puzzle/core/score.ts` 한 곳(레벨마다 완성 1 + 조건 2개, 테스트 `tests/score.test.ts`), 별 합계는 `src/puzzle/core/collection.ts`(디저트 도감은 2026-10-27 사용자 결정으로 없앰), 판마다 시간 기록·최고 기록은 `src/puzzle/core/record.ts`(테스트 `tests/record.test.ts`, 화면 `/records`에 연속 출석 달력과 최근 기록 흐름), 효과음·진동은 `src/platform/feedback.ts`의 `cue()`로만 낸다(설정에서 끌 수 있음, 기본 켜짐).
+- 스도쿠 난이도는 푸는 기술로 매긴다(`src/puzzle/sudoku/techniques.ts`, 2026-10-27): 쉬움·보통은 단서 찾기만(예전 판 그대로), 어려움은 한 줄 몰림·짝 숫자가, 아주 어려움은 세 칸 묶음·X날개·XY날개·황새치가 꼭 필요하고 모두 찍지 않고 풀린다(`check:pool`이 확인). 힌트는 단서로 못 찾으면 그 기술을 판에 비춰 가르친다(`reason: "technique"`).
 - 스도쿠 메모를 켜면 '자동 메모'(`autoNotes`, 도움으로 세지 않음)를 쓸 수 있다. 색깔 구역·노노그램의 '막힌 칸 자동 X'(설정 `autoCross`, 기본 켜짐)는 저장하지 않고 화면에서만 흐린 X로 그린다(`blockedZoneCells`, 노노그램은 단서를 다 채운 줄).
 - 내가 넣은 숫자는 민트, 빨강은 겹친 숫자·'틀린 칸 보기'에만 쓴다. 이어 하기 판단은 시간이 아니라 넣은 숫자·메모로 한다(`hasProgress`).
 - 색깔 구역 퍼즐(`src/puzzle/zones`)은 레벨 번호로 만들고 답 하나 + 찍지 않고 풀리는 판만 쓴다. 레벨 1~120은 단위 테스트가 검사한다.

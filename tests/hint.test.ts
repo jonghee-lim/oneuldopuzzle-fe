@@ -46,6 +46,32 @@ test("스도쿠 힌트: 쉬움·보통은 단서만으로 끝까지, 힌트를 �
   }
 });
 
+test("스도쿠 힌트: 어려움·아주 어려움도 답을 그냥 알려 주지 않고 기술로 끝까지 가르친다", () => {
+  for (const [level, difficulty] of [[41, "hard"], [50, "expert"]] as const) {
+    const p = puzzleForLevel(level, difficulty);
+    const start = newGame({ id: p.id, level, difficulty: p.difficulty, puzzle: p.puzzle, solution: p.solution });
+    const reasons = new Set<string>();
+    hintsSolve(
+      start,
+      (g) => {
+        const h = findHint(g);
+        if (h?.kind === "place") {
+          reasons.add(h.reason);
+          const steps = sudokuHintSteps(g, h);
+          assert.equal(steps.length, h.reason === "technique" ? 2 : steps.length);
+          assert.ok(steps.every((s) => s.text.length > 0 && !s.text.includes("undefined")));
+          assert.ok(steps[steps.length - 1].cells.includes(h.index));
+        }
+        return h;
+      },
+      applyHint,
+      (g) => g.completed,
+    );
+    assert.ok(reasons.has("technique"), `${difficulty}는 기술 힌트가 나옴`);
+    assert.ok(!reasons.has("answer"), `${difficulty}는 답을 그냥 알려 주지 않음`);
+  }
+});
+
 test("스도쿠 힌트: 틀린 숫자가 있으면 그 칸부터 비운다", () => {
   const p = puzzleForLevel(1, "easy");
   let g = newGame({ id: p.id, level: 1, difficulty: "easy", puzzle: p.puzzle, solution: p.solution });

@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import PuzzleThumb from "../components/home/PuzzleThumb";
 import Page from "../components/layout/Page";
 import PuzzleHeader from "../components/layout/PuzzleHeader";
-import { DIFFICULTY_LABEL, type SudokuDifficulty } from "../puzzle/sudoku/generator";
+import { DIFFICULTY_LABEL, DIFFICULTY_SKILL, type SudokuDifficulty } from "../puzzle/sudoku/generator";
 import { formatTime, hasProgress } from "../puzzle/sudoku/game";
 import { sudokuNext, usePuzzleStore } from "../stores/puzzleStore";
 import { dessert } from "../theme/palette";
@@ -65,12 +65,14 @@ export default function SudokuPage() {
                 </ToggleButton>
               ))}
             </ToggleButtonGroup>
-            <Button variant="contained" size="large" fullWidth onClick={() => navigate("/play")} sx={{ mt: 2, height: 56, fontSize: 18 }}>
+            {/* 고른 난이도에 필요한 기술. 두 줄 높이를 늘 잡아 두어 난이도를 바꿔도 버튼이 움직이지 않습니다. */}
+            <Typography sx={{ mt: 1.25, fontSize: 13, lineHeight: 1.45, minHeight: "2.9em", color: dessert.cocoaSoft }}>{DIFFICULTY_SKILL[difficulty]}</Typography>
+            <Button variant="contained" size="large" fullWidth onClick={() => navigate("/play")} sx={{ mt: 1, height: 56, fontSize: 18 }}>
               {resume ? `이어 하기 · ${formatTime(resume.elapsedSeconds)}` : "시작하기"}
             </Button>
           </Box>
         </Box>
-        <Typography sx={{ fontSize: 13, color: dessert.cocoaSoft, mt: 1.5, px: 0.5 }}>레벨은 난이도마다 따로 이어져요. 좋아하는 난이도로 계속 풀어 보세요.</Typography>
+        <Typography sx={{ fontSize: 13, color: dessert.cocoaSoft, mt: 1.5, px: 0.5 }}>레벨은 난이도마다 따로 이어져요. 모든 판은 찍지 않고 풀리고, 막히면 힌트가 필요한 기술을 알려 줘요.</Typography>
       </Box>
     </Page>
   );
