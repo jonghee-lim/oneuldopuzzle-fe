@@ -8,7 +8,7 @@ import { useNavigate } from "react-router-dom";
 import Page from "../components/layout/Page";
 import ConfirmRestart from "../components/puzzle/ConfirmRestart";
 import PuzzleBoard from "../components/puzzle/PuzzleBoard";
-import ScoreChips from "../components/puzzle/ScoreChips";
+import StarChips from "../components/puzzle/StarChips";
 import ToolButton from "../components/puzzle/ToolButton";
 import { cue } from "../platform/feedback";
 import type { SudokuGame } from "../puzzle/sudoku/game";
@@ -53,7 +53,7 @@ export default function PlayPage() {
   const hint = useHint();
   const dailyClear = useDailyClear(game?.elapsedSeconds ?? 0);
   const [confirmRestart, setConfirmRestart] = useState(false);
-  const lastScore = usePuzzleStore((s) => s.lastScore);
+  const lastStars = usePuzzleStore((s) => s.lastStars);
   // 줄·상자를 다 채우면 그 칸들이 한 번 반짝입니다(key를 바꿔 매번 다시 재생).
   const [flashCells, setFlashCells] = useState<{ key: number; cells: Set<number> }>({ key: 0, cells: new Set() });
 
@@ -264,7 +264,7 @@ export default function PlayPage() {
         <Typography sx={{ color: "text.secondary", mt: 0.5 }}>
           걸린 시간 {formatTime(game.elapsedSeconds)}
         </Typography>
-        <ScoreChips lines={lastScore} />
+        <StarChips lines={daily ? null : lastStars} />
         <Button variant="contained" size="large" fullWidth onClick={goNext} sx={{ mt: 3, height: 52 }}>
           다음 레벨
         </Button>

@@ -14,6 +14,10 @@ export interface NonogramGame {
   tool: NonogramTool;
   history: History<number[]>;
   solved: boolean;
+  /** 답에서 비어 있어야 할 칸을 칠한 횟수(별 조건) */
+  mistakes?: number;
+  /** 힌트를 쓴 판(별 하나를 받지 못함) */
+  usedHint?: boolean;
 }
 
 export function newNonogramGame(picture: NonogramPicture): NonogramGame {
@@ -37,9 +41,10 @@ export function tapNonogramCell(game: NonogramGame, index: number): NonogramGame
   const want = game.tool === "fill" ? 1 : 2;
   const cells = game.cells.slice();
   cells[index] = cells[index] === want ? 0 : want;
+  const mistakes = (game.mistakes ?? 0) + (cells[index] === 1 && game.solution[index] !== 1 ? 1 : 0);
   // 단서는 칠한 칸만 봅니다. 답과 같은 그림이면 완성입니다(답이 하나라 단서가 맞으면 곧 답입니다).
   const solved = cells.every((v, i) => (v === 1) === (game.solution[i] === 1));
-  return { ...game, cells, history: pushHistory(game.history, game.cells), solved };
+  return { ...game, cells, history: pushHistory(game.history, game.cells), solved, mistakes };
 }
 
 export function setTool(game: NonogramGame, tool: NonogramTool): NonogramGame {
@@ -53,7 +58,7 @@ export function undoNonogram(game: NonogramGame): NonogramGame {
 }
 
 export function restartNonogram(game: NonogramGame): NonogramGame {
-  return { ...game, cells: new Array<number>(game.cells.length).fill(0), history: [], solved: false };
+  return { ...game, cells: new Array<number>(game.cells.length).fill(0), history: [], solved: false, mistakes: 0, usedHint: false };
 }
 
 /** 줄의 칠한 칸이 단서와 맞으면 그 단서를 흐리게 보여 줍니다. */
@@ -93,5 +98,5 @@ export function applyNonogramHint(game: NonogramGame, hint: NonogramHint): Nonog
   const cells = game.cells.slice();
   cells[hint.index] = hint.remove ? 2 : 1;
   const solved = cells.every((v, i) => (v === 1) === (game.solution[i] === 1));
-  return { ...game, cells, history: pushHistory(game.history, game.cells), solved };
+  return { ...game, cells, history: pushHistory(game.history, game.cells), solved, usedHint: true };
 }

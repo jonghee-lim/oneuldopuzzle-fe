@@ -10,7 +10,7 @@ import ConfirmRestart from "../components/puzzle/ConfirmRestart";
 import PuzzleBoard from "../components/puzzle/PuzzleBoard";
 import ToolButton from "../components/puzzle/ToolButton";
 import { cue } from "../platform/feedback";
-import { restartSlide, swipeSlide, tapSlide, tickSlide, undoSlide } from "../puzzle/sliding/game";
+import { applySlideHint, restartSlide, swipeSlide, tapSlide, tickSlide, undoSlide } from "../puzzle/sliding/game";
 import { slideHint } from "../puzzle/sliding/hint";
 import { movableCells } from "../puzzle/sliding/rules";
 import { formatTime } from "../puzzle/sudoku/game";
@@ -31,7 +31,7 @@ export default function SlidingPage() {
   const startDailySlide = usePuzzleStore((s) => s.startDailySlide);
   const hint = useHint();
   const dailyClear = useDailyClear(game?.elapsedSeconds ?? 0);
-  const lastScore = usePuzzleStore((s) => s.lastScore);
+  const lastStars = usePuzzleStore((s) => s.lastStars);
   const [confirm, setConfirm] = useState(false);
 
   useEffect(() => {
@@ -111,7 +111,7 @@ export default function SlidingPage() {
           onCellTap={(index) => {
             if (!movable.has(index)) return;
             updateSlide((g) => tapSlide(g, index));
-            cue(usePuzzleStore.getState().slideGame?.solved ? "clear" : "place");
+            cue(usePuzzleStore.getState()[daily ? "dailySlide" : "slideGame"]?.solved ? "clear" : "place");
           }}
           cellLabel={(index) => {
             const n = game.board[index];
@@ -140,7 +140,7 @@ export default function SlidingPage() {
           hint.give(
             () => slideHint(game.board, size),
             (index) => {
-              updateSlide((g) => tapSlide(g, index));
+              updateSlide((g) => applySlideHint(g, index));
               cue(usePuzzleStore.getState()[daily ? "dailySlide" : "slideGame"]?.solved ? "clear" : "place");
             },
             (index) => `${game.board[index]}번 조각을 밀었어요.`,
@@ -165,7 +165,7 @@ export default function SlidingPage() {
         detail={daily ? dailyClear.detail : `${game.moves}수 · ${formatTime(game.elapsedSeconds)}${minMoves !== null ? ` · 최소 ${minMoves}수` : ""}`}
         nextLabel={daily ? dailyClear.nextLabel : "다음 레벨"}
         onNext={daily ? dailyClear.onNext : () => startSlide()}
-        score={daily ? null : lastScore}
+        stars={daily ? null : lastStars}
       />
       {hint.toast}
     </Page>

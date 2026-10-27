@@ -30,7 +30,7 @@ export default function BlocksPage() {
   const startDailyBlocks = usePuzzleStore((s) => s.startDailyBlocks);
   const hint = useHint();
   const dailyClear = useDailyClear(game?.elapsedSeconds ?? 0);
-  const lastScore = usePuzzleStore((s) => s.lastScore);
+  const lastStars = usePuzzleStore((s) => s.lastStars);
   const [confirm, setConfirm] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -175,7 +175,7 @@ export default function BlocksPage() {
         detail={daily ? dailyClear.detail : `걸린 시간 ${formatTime(game.elapsedSeconds)}`}
         nextLabel={daily ? dailyClear.nextLabel : "다음 레벨"}
         onNext={daily ? dailyClear.onNext : () => startBlocks()}
-        score={daily ? null : lastScore}
+        stars={daily ? null : lastStars}
       />
       {hint.toast}
     </Page>

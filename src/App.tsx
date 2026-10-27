@@ -6,6 +6,7 @@ import EscapePage from "./pages/EscapePage";
 import HomePage from "./pages/HomePage";
 import NonogramPage from "./pages/NonogramPage";
 import PlayPage from "./pages/PlayPage";
+import DessertsPage from "./pages/DessertsPage";
 import RecordsPage from "./pages/RecordsPage";
 import SettingsPage from "./pages/SettingsPage";
 import SlidingPage from "./pages/SlidingPage";
@@ -35,6 +36,7 @@ export default function App() {
       <Route path="/sliding" element={<SlidingPage />} />
       <Route path="/blocks" element={<BlocksPage />} />
       <Route path="/records" element={<RecordsPage />} />
+      <Route path="/desserts" element={<DessertsPage />} />
       <Route path="/special/nonogram" element={<NonogramPage />} />
       <Route path="/special/escape" element={<EscapePage />} />
       <Route path="*" element={<Navigate to="/" replace />} />

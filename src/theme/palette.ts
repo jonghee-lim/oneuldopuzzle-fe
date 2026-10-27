@@ -19,7 +19,7 @@ export const dessert = {
   conflictMilk: "#FBE3E1",
 } as const;
 
-/** 레벨마다 돌아가며 보이는 디저트(테마 수집은 4단계에서 붙입니다). 그림은 components/dessert/DessertArt. */
+/** 모으는 디저트(도감 순서). 레벨마다 돌아가며 보이고, 별을 모으거나 오늘의 퍼즐로 받습니다. 그림은 components/dessert/DessertArt. */
 export const DESSERTS = [
   { id: "cake", name: "딸기 케이크" },
   { id: "cupcake", name: "컵케이크" },
@@ -27,6 +27,18 @@ export const DESSERTS = [
   { id: "macaron", name: "민트 마카롱" },
   { id: "pudding", name: "커스터드 푸딩" },
   { id: "cookie", name: "초코칩 쿠키" },
+  { id: "tart", name: "딸기 타르트" },
+  { id: "roll", name: "롤케이크" },
+  { id: "icecream", name: "아이스크림" },
+  { id: "croissant", name: "크루아상" },
+  { id: "madeleine", name: "마들렌" },
+  { id: "waffle", name: "와플" },
+  { id: "pancake", name: "팬케이크" },
+  { id: "jelly", name: "과일 젤리" },
+  { id: "choux", name: "슈크림" },
+  { id: "taiyaki", name: "붕어빵" },
+  { id: "bingsu", name: "딸기 빙수" },
+  { id: "cheesecake", name: "치즈케이크" },
 ] as const;
 
 export type DessertId = (typeof DESSERTS)[number]["id"];

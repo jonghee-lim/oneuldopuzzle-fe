@@ -1,31 +1,22 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { blockScore, slideScore, specialScore, sudokuScore, total, zoneScore } from "../src/puzzle/core/score.ts";
+import { dailyHintReward, starCount, sudokuStars, zoneStars, blockStars, slideStars, nonogramStars, escapeStars } from "../src/puzzle/core/score.ts";
 
-test("스도쿠 점수: 난이도·빠르기·도움 없이", () => {
-  assert.equal(total(sudokuScore("easy", 600, true)), 10);
-  assert.equal(total(sudokuScore("easy", 200, false)), 10 + 5 + 2);
-  assert.equal(total(sudokuScore("expert", 2000, false)), 80 + 16);
-});
-
-test("색깔 구역·스페셜 점수", () => {
-  assert.equal(total(zoneScore(5, 999)), 15);
-  assert.equal(total(zoneScore(6, 60)), 18 + 9);
-  assert.equal(total(specialScore(true, true)), 150);
-  assert.equal(total(specialScore(false, false)), 0);
-});
-
-test("슬라이딩·블록 채우기 점수", () => {
-  assert.equal(total(slideScore(3, 10, 8)), 12);
-  assert.equal(total(slideScore(3, 8, 8)), 18);
-  assert.equal(total(slideScore(4, 50, null)), 16);
-  assert.equal(total(blockScore(5, 60)), 15 + 8);
-  assert.equal(total(blockScore(5, 999)), 15);
-});
-
-test("오늘의 퍼즐 힌트 보상: 한 판 1개, 세 번째 판은 보너스 2개 더", async () => {
-  const { dailyHintReward } = await import("../src/puzzle/core/score.ts");
+test("오늘의 퍼즐 힌트 보상: 한 판 1개, 세 번째 판은 보너스 2개 더", () => {
   assert.equal(dailyHintReward(0, 3), 1);
   assert.equal(dailyHintReward(1, 3), 1);
   assert.equal(dailyHintReward(2, 3), 3);
+});
+
+test("레벨 별: 완성 1개 + 조건마다 1개, 최대 3개", () => {
+  assert.equal(starCount(sudokuStars("easy", 200, false)), 3);
+  assert.equal(starCount(sudokuStars("easy", 400, false)), 2);
+  assert.equal(starCount(sudokuStars("easy", 400, true)), 1);
+  assert.equal(starCount(zoneStars(5, 60, true)), 2);
+  assert.equal(starCount(blockStars(4, 100, false)), 2);
+  assert.equal(starCount(slideStars(4, 4, 999, false)), 3);
+  assert.equal(starCount(slideStars(40, null, 200, false)), 2);
+  assert.equal(starCount(nonogramStars(1, false)), 2);
+  assert.equal(starCount(escapeStars(5, 5, true)), 2);
+  assert.equal(sudokuStars("normal", 0, false)[1].label, "9분 안에");
 });

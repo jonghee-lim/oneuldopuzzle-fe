@@ -12,6 +12,8 @@ export interface BlockGame {
   history: History<(number | null)[]>;
   elapsedSeconds: number;
   solved: boolean;
+  /** 힌트를 쓴 판(별 하나를 받지 못함) */
+  usedHint?: boolean;
 }
 
 export function newBlockGame(level: number, puzzle: BlockPuzzle): BlockGame {
@@ -111,5 +113,5 @@ export function applyBlockHint(game: BlockGame, hint: BlockHint): BlockGame {
   placed[hint.piece] = hint.remove ? null : hint.anchor;
   const solved = placed.every((a) => a !== null);
   const selected = solved ? null : hint.remove ? hint.piece : nextFree(placed, hint.piece);
-  return { ...game, placed, selected, history: pushHistory(game.history, game.placed), solved };
+  return { ...game, placed, selected, history: pushHistory(game.history, game.placed), solved, usedHint: true };
 }

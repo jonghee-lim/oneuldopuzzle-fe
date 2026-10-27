@@ -11,6 +11,8 @@ export interface SlideGame {
   history: History<SlideBoard>;
   elapsedSeconds: number;
   solved: boolean;
+  /** 힌트를 쓴 판(별 하나를 받지 못함) */
+  usedHint?: boolean;
 }
 
 export function newSlideGame(level: number, puzzle: SlidePuzzle): SlideGame {
@@ -22,6 +24,12 @@ export function tapSlide(game: SlideGame, index: number): SlideGame {
   const board = slideFrom(game.board, game.puzzle.size, index);
   if (!board) return game;
   return { ...game, board, moves: game.moves + 1, history: pushHistory(game.history, game.board), solved: isSolved(board) };
+}
+
+/** 힌트로 알려 준 조각을 밉니다(slideHint). */
+export function applySlideHint(game: SlideGame, index: number): SlideGame {
+  const next = tapSlide(game, index);
+  return next === game ? game : { ...next, usedHint: true };
 }
 
 export function undoSlide(game: SlideGame): SlideGame {

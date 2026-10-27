@@ -41,14 +41,14 @@ function EscapeStage({ stage, onStage }: { stage: number; onStage: (stage: numbe
   const cellPct = 100 / ESCAPE_SIZE;
   const escapeBest = usePuzzleStore((s) => s.escapeBest);
   const clearEscape = usePuzzleStore((s) => s.clearEscape);
-  const lastScore = usePuzzleStore((s) => s.lastScore);
+  const lastStars = usePuzzleStore((s) => s.lastStars);
   const best = escapeBest[stage];
   useEffect(() => {
     if (game.escaped) {
-      clearEscape(stage, game.moves, puzzle.minMoves);
+      clearEscape(stage, game.moves, puzzle.minMoves, !!game.usedHint);
       cue("clear");
     }
-  }, [game.escaped, game.moves, stage, puzzle.minMoves, clearEscape]);
+  }, [game.escaped, game.moves, game.usedHint, stage, puzzle.minMoves, clearEscape]);
 
   const blocks = (
     <Box sx={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
@@ -158,7 +158,7 @@ function EscapeStage({ stage, onStage }: { stage: number; onStage: (stage: numbe
         title="탈출 성공!"
         detail={`${game.moves}수 만에 나왔어요 · 최소 ${puzzle.minMoves}수`}
         nextLabel="다음 단계"
-        score={lastScore}
+        stars={lastStars}
         onNext={stage < ESCAPES.length - 1 ? () => onStage(stage + 1) : undefined}
       />
       {hint.toast}

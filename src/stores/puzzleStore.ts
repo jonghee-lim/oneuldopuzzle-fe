@@ -1,8 +1,10 @@
 // 진행 상황·점수·설정을 기기에 저장합니다. 계정·동기화는 이후 단계에서 공용 API에 붙입니다.
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { HINT_START, blockScore, dailyHintReward, slideScore, specialScore, sudokuScore, total, zoneScore, type ScoreLine } from "../puzzle/core/score";
-import { dailyBlocks, dailyKinds, dailySlide, dailySudoku, dailyZones, dateKey, type DailyKind } from "../puzzle/core/daily";
+import { HINT_PER_UNLOCK, HINT_START, blockStars, dailyHintReward, escapeStars, nonogramStars, slideStars, starCount, sudokuStars, zoneStars, type StarLine } from "../puzzle/core/score";
+import { keepBest, newlyUnlocked, starKey, totalStarsOf } from "../puzzle/core/collection";
+import { DESSERTS, dessertForLevel, type DessertId } from "../theme/palette";
+import { dailyBlocks, dailyKinds, dailySlide, dailySudoku, dailyZones, dateKey, dayNumber, type DailyKind } from "../puzzle/core/daily";
 import { blocksForLevel } from "../puzzle/blocks/generator";
 import { newBlockGame, type BlockGame } from "../puzzle/blocks/game";
 import { slideForLevel } from "../puzzle/sliding/generator";
@@ -46,10 +48,16 @@ interface PuzzleState {
   /** 시작 화면에서 고른 난이도. null이면 레벨에 맞는 난이도 */
   chosenDifficulty: SudokuDifficulty | null;
   /** 총점과 종류별 기록(점수표) */
-  score: number;
   stats: Partial<Record<StatKey, PuzzleStat>>;
   /** 방금 푼 판에서 얻은 점수(완성 창에 보여 주고 저장하지 않음) */
-  lastScore: ScoreLine[] | null;
+  /** 방금 깬 레벨에서 받은 별(완성 창에 보여 줌) */
+  lastStars: StarLine[] | null;
+  /** 방금 판으로 별이 쌓여 새로 열린 디저트(완성 창에 보여 줌) */
+  lastUnlock: DessertId | null;
+  /** 레벨별 가장 많이 받은 별(키는 collection.starKey) */
+  stars: Record<string, number>;
+  /** 오늘의 퍼즐로 받은 디저트 수(디저트 id → 개수) */
+  treats: Record<string, number>;
   /** 색깔 구역 퍼즐 */
   zoneCleared: number;
   zoneGame: ZoneGame | null;
@@ -89,8 +97,8 @@ interface PuzzleState {
   updateSlide: (update: (game: SlideGame) => SlideGame) => void;
   startBlocks: () => BlockGame;
   updateBlocks: (update: (game: BlockGame) => BlockGame) => void;
-  clearNonogram: (stage: number) => void;
-  clearEscape: (stage: number, moves: number, minMoves: number) => void;
+  clearNonogram: (stage: number, mistakes: number, helped: boolean) => void;
+  clearEscape: (stage: number, moves: number, minMoves: number, helped: boolean) => void;
   /** 힌트 하나를 씁니다. 남은 힌트가 없으면 false */
   spendHint: () => boolean;
   /** 날짜가 바뀌었으면 오늘의 퍼즐을 새로 준비합니다. */
@@ -106,6 +114,22 @@ interface PuzzleState {
 }
 
 const DAILY_RESET = { dailySudoku: null, dailyZone: null, dailyBlocks: null, dailySlide: null, dailyDone: [] as DailyKind[] };
+
+function addTreat(treats: Record<string, number>, id: string): Record<string, number> {
+  return { ...treats, [id]: (treats[id] ?? 0) + 1 };
+}
+
+/** 한 판의 별을 기록하고, 별로 새 디저트가 열리면 힌트를 줍니다. */
+function gainStars(state: PuzzleState, key: string, lines: StarLine[]): Pick<PuzzleState, "stars" | "hints" | "lastStars" | "lastUnlock"> {
+  const stars = keepBest(state.stars, key, starCount(lines));
+  const opened = newlyUnlocked(totalStarsOf(state.stars), totalStarsOf(stars), DESSERTS.length);
+  return {
+    stars,
+    hints: state.hints + opened.length * HINT_PER_UNLOCK,
+    lastStars: lines,
+    lastUnlock: opened.length ? DESSERTS[opened[opened.length - 1]].id : null,
+  };
+}
 
 function addStat(stats: PuzzleState["stats"], key: StatKey, seconds: number): PuzzleState["stats"] {
   const prev = stats[key] ?? { cleared: 0, totalSeconds: 0 };
@@ -151,6 +175,8 @@ export const usePuzzleStore = create<PuzzleState>()(
             hints: get().hints + reward,
             lastHintReward: reward,
             dailyDays: allDone && !get().dailyDays.includes(date) ? [...get().dailyDays, date].slice(-400) : get().dailyDays,
+            // 세 판을 다 풀면 그날의 디저트를 받습니다(도감에서 바로 열림).
+            treats: allDone ? addTreat(get().treats, dessertForLevel(dayNumber(date) + 1).id) : get().treats,
           } as Partial<PuzzleState>);
           return;
         }
@@ -164,9 +190,11 @@ export const usePuzzleStore = create<PuzzleState>()(
       game: null,
       paused: {},
       chosenDifficulty: null,
-      score: 0,
       stats: {},
-      lastScore: null,
+      lastStars: null,
+      lastUnlock: null,
+      stars: {},
+      treats: {},
       zoneCleared: 0,
       zoneGame: null,
       slideCleared: 0,
@@ -208,14 +236,13 @@ export const usePuzzleStore = create<PuzzleState>()(
         if (game.completed && !before.completed) {
           const key = `${game.difficulty}:${game.level}`;
           const best = get().bestSeconds[key];
-          const lines = sudokuScore(game.difficulty, game.elapsedSeconds, !!game.usedCheck || !!game.usedHint);
+          const lines = sudokuStars(game.difficulty, game.elapsedSeconds, !!game.usedCheck || !!game.usedHint);
           set({
+            ...gainStars(get(), starKey.sudoku(game.difficulty, game.level), lines),
             game,
             sudokuCleared: { ...get().sudokuCleared, [game.difficulty]: Math.max(get().sudokuCleared[game.difficulty] ?? 0, game.level) },
             bestSeconds: { ...get().bestSeconds, [key]: best ? Math.min(best, game.elapsedSeconds) : game.elapsedSeconds },
-            score: get().score + total(lines),
             stats: addStat(get().stats, game.difficulty, game.elapsedSeconds),
-            lastScore: lines,
           });
           return;
         }
@@ -237,13 +264,12 @@ export const usePuzzleStore = create<PuzzleState>()(
         const zoneGame = update(before);
         if (zoneGame === before) return;
         if (zoneGame.solved && !before.solved) {
-          const lines = zoneScore(zoneGame.puzzle.size, zoneGame.elapsedSeconds);
+          const lines = zoneStars(zoneGame.puzzle.size, zoneGame.elapsedSeconds, !!zoneGame.usedHint);
           set({
             zoneGame,
             zoneCleared: Math.max(get().zoneCleared, zoneGame.level),
-            score: get().score + total(lines),
+            ...gainStars(get(), starKey.zones(zoneGame.level), lines),
             stats: addStat(get().stats, "zones", zoneGame.elapsedSeconds),
-            lastScore: lines,
           });
           return;
         }
@@ -263,13 +289,12 @@ export const usePuzzleStore = create<PuzzleState>()(
         const slideGame = update(before);
         if (slideGame === before) return;
         if (slideGame.solved && !before.solved) {
-          const lines = slideScore(slideGame.puzzle.size, slideGame.moves, slideGame.puzzle.minMoves);
+          const lines = slideStars(slideGame.moves, slideGame.puzzle.minMoves, slideGame.elapsedSeconds, !!slideGame.usedHint);
           set({
             slideGame,
             slideCleared: Math.max(get().slideCleared, slideGame.level),
-            score: get().score + total(lines),
+            ...gainStars(get(), starKey.sliding(slideGame.level), lines),
             stats: addStat(get().stats, "sliding", slideGame.elapsedSeconds),
-            lastScore: lines,
           });
           return;
         }
@@ -289,36 +314,31 @@ export const usePuzzleStore = create<PuzzleState>()(
         const blockGame = update(before);
         if (blockGame === before) return;
         if (blockGame.solved && !before.solved) {
-          const lines = blockScore(blockGame.puzzle.size, blockGame.elapsedSeconds);
+          const lines = blockStars(blockGame.puzzle.size, blockGame.elapsedSeconds, !!blockGame.usedHint);
           set({
             blockGame,
             blockCleared: Math.max(get().blockCleared, blockGame.level),
-            score: get().score + total(lines),
+            ...gainStars(get(), starKey.blocks(blockGame.level), lines),
             stats: addStat(get().stats, "blocks", blockGame.elapsedSeconds),
-            lastScore: lines,
           });
           return;
         }
         set({ blockGame });
       },
-      clearNonogram: (stage) => {
+      clearNonogram: (stage, mistakes, helped) => {
         const first = !get().nonogramCleared.includes(stage);
-        const lines = specialScore(first, false);
+        const lines = nonogramStars(mistakes, helped);
         set({
           nonogramCleared: first ? [...get().nonogramCleared, stage] : get().nonogramCleared,
-          score: get().score + total(lines),
-          lastScore: lines,
+          ...gainStars(get(), starKey.nonogram(stage), lines),
         });
       },
-      clearEscape: (stage, moves, minMoves) => {
+      clearEscape: (stage, moves, minMoves, helped) => {
         const best = get().escapeBest[stage];
-        const first = best === undefined;
-        const perfectFirst = moves <= minMoves && (first || best > minMoves);
-        const lines = specialScore(first, perfectFirst);
+        const lines = escapeStars(moves, minMoves, helped);
         set({
-          escapeBest: first || moves < best ? { ...get().escapeBest, [stage]: moves } : get().escapeBest,
-          score: get().score + total(lines),
-          lastScore: lines,
+          escapeBest: best === undefined || moves < best ? { ...get().escapeBest, [stage]: moves } : get().escapeBest,
+          ...gainStars(get(), starKey.escape(stage), lines),
         });
       },
 
@@ -372,16 +392,29 @@ export const usePuzzleStore = create<PuzzleState>()(
     },
     {
       name: "oneuldopuzzle-v1",
-      version: 2,
+      version: 3,
       // 버전 1은 모든 난이도가 레벨 하나를 같이 썼습니다. 깬 레벨은 그때 고른 난이도의 레벨로 옮깁니다.
       migrate: (persisted, version) => {
-        const p = (persisted ?? {}) as Partial<PuzzleState> & { clearedLevel?: number; bestSeconds?: Record<string, number> };
+        let p = (persisted ?? {}) as Partial<PuzzleState> & { clearedLevel?: number; score?: number; lastScore?: unknown };
+        // 버전 1은 모든 난이도가 레벨 하나를 같이 썼습니다. 깬 레벨은 그때 고른 난이도의 레벨로 옮깁니다.
         if (version < 2) {
           const cleared = p.clearedLevel ?? 0;
           const difficulty = p.chosenDifficulty ?? difficultyForLevel(cleared + 1);
-          const next = { ...p, chosenDifficulty: difficulty, sudokuCleared: cleared ? { [difficulty]: cleared } : {}, bestSeconds: {} };
-          delete next.clearedLevel;
-          return next as never;
+          p = { ...p, chosenDifficulty: difficulty, sudokuCleared: cleared ? { [difficulty]: cleared } : {}, bestSeconds: {} };
+          delete p.clearedLevel;
+        }
+        // 버전 3은 점수 대신 별. 예전에 깬 레벨은 별 1개씩으로 옮깁니다.
+        if (version < 3) {
+          const stars: Record<string, number> = {};
+          for (const [d, n] of Object.entries(p.sudokuCleared ?? {})) for (let l = 1; l <= (n ?? 0); l += 1) stars[starKey.sudoku(d, l)] = 1;
+          for (let l = 1; l <= (p.zoneCleared ?? 0); l += 1) stars[starKey.zones(l)] = 1;
+          for (let l = 1; l <= (p.blockCleared ?? 0); l += 1) stars[starKey.blocks(l)] = 1;
+          for (let l = 1; l <= (p.slideCleared ?? 0); l += 1) stars[starKey.sliding(l)] = 1;
+          for (const st of p.nonogramCleared ?? []) stars[starKey.nonogram(st)] = 1;
+          for (const st of Object.keys(p.escapeBest ?? {})) stars[starKey.escape(Number(st))] = 1;
+          p = { ...p, stars, treats: {} };
+          delete p.score;
+          delete p.lastScore;
         }
         return p as never;
       },
@@ -397,7 +430,6 @@ export const usePuzzleStore = create<PuzzleState>()(
         settings: s.settings,
         chosenDifficulty: s.chosenDifficulty,
         paused: s.paused,
-        score: s.score,
         stats: s.stats,
         zoneCleared: s.zoneCleared,
         zoneGame: s.zoneGame ? { ...s.zoneGame, history: [] } : null,
@@ -407,6 +439,8 @@ export const usePuzzleStore = create<PuzzleState>()(
         blockGame: s.blockGame ? { ...s.blockGame, history: [] } : null,
         nonogramCleared: s.nonogramCleared,
         escapeBest: s.escapeBest,
+        stars: s.stars,
+        treats: s.treats,
         hints: s.hints,
         dailyDate: s.dailyDate,
         dailySudoku: s.dailySudoku ? { ...s.dailySudoku, history: [], selected: null } : null,
