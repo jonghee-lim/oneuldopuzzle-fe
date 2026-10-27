@@ -3,7 +3,7 @@
 - 사용자와는 한국어로 소통한다. 공통 지침은 스마트인포랩 워크스페이스 AI 지침(공통 + 앱 ONEULDOPUZZLE)을 따른다.
 - 스택은 형제 앱 표준(Vite + React + TypeScript + MUI, 설치형 앱은 Capacitor). 기준 앱은 달 리듬, 공유 패키지는 `@smartinfolab/app-core`(vendor tgz).
 - 설계 원칙(설계서 2026-10-25): 터치 중심(끌어다 놓기 없음, 단 블록 탈출·슬라이딩은 2026-10-26 사용자 요청으로 쓸기도 받음 — `useSwipe`), 답이 정확히 하나인 문제만 내보냄, 강제 광고 없음, 알림 기본 꺼짐, 메모는 작게 숨기고 숫자 패드는 크게.
-- 퍼즐 규칙·생성·검사는 `src/puzzle/<퍼즐>`의 순수 함수로 두고 단위 테스트(`tests/*.test.ts`)로 확인한다. 화면은 `PuzzleBoard`를 함께 쓴다.
+- 퍼즐 규칙·생성·검사는 `src/puzzle/<퍼즐>`의 순수 함수로 두고 단위 테스트(`tests/*.test.ts`)로 확인한다. 화면은 `PuzzleBoard`를 함께 쓴다(칸마다 aspect-ratio로 정사각형, 판에 aspect-ratio를 주면 iOS Safari에서 줄 높이가 들쭉날쭉해짐, 2026-10-27).
 - 문제를 바꾸면 `npm test`와 `npm run check:pool -- 1000`을 함께 돌린다. 화면을 바꾸면 `npm run test:e2e`(320px 좁은 화면에서 가로로 넘치지 않는지도 `narrow.mjs`가 본다: 넘치면 iOS가 화면을 줄였다 키워 판이 커졌다 작아져 보임, 2026-10-27 신고). 상태에 따라 버튼 이름 길이를 바꾸지 않는다.
 - 화면·컴포넌트는 공유 패키지를 직접 import하지 않고 `src/theme` 같은 얇은 파일을 거친다(eslint로 막음).
 - 별 규칙은 `src/puzzle/core/score.ts` 한 곳(레벨마다 완성 1 + 조건 2개, 테스트 `tests/score.test.ts`), 도감은 `src/puzzle/core/collection.ts`(별 6개마다 디저트 하나, 오늘의 퍼즐 세 판이면 그날 디저트, 화면 `/desserts`), 효과음·진동은 `src/platform/feedback.ts`의 `cue()`로만 낸다(설정에서 끌 수 있음, 기본 켜짐).

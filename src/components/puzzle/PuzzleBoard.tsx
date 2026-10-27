@@ -41,7 +41,8 @@ export default function PuzzleBoard({ size, label, renderCell, cellLabel, onCell
         display: "grid",
         gridTemplateColumns: `repeat(${size}, minmax(0, 1fr))`,
         width: "100%",
-        aspectRatio: "1 / 1",
+        // 판 높이는 정사각형 칸 줄이 모여 정해집니다. 판에 aspect-ratio를 주고 줄 높이를 내용에 맡기면
+        // iOS Safari가 숫자·메모가 든 줄을 다르게 늘려 칸 높이가 들쭉날쭉해집니다(2026-10-27 신고).
         bgcolor: dessert.paper,
         border: `3px solid ${dessert.cocoaSoft}`,
         borderRadius: radius.item,
@@ -60,6 +61,8 @@ export default function PuzzleBoard({ size, label, renderCell, cellLabel, onCell
               position: "relative",
               minWidth: 0,
               minHeight: 0,
+              aspectRatio: "1 / 1",
+              overflow: "hidden",
               borderTop: row === 0 ? "none" : edges.top ? THICK : THIN,
               borderLeft: col === 0 ? "none" : edges.left ? THICK : THIN,
               // 오른쪽·아래 선은 다음 칸이 그리므로 겹쳐 굵어지지 않습니다.
