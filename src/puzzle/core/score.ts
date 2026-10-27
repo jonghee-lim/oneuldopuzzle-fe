@@ -4,8 +4,9 @@ import type { SudokuDifficulty } from "../sudoku/generator.ts";
 /** 난이도별 기준 시간(초). 이보다 빨리 풀면 별 하나를 더 줍니다. */
 export const SUDOKU_PAR_SECONDS: Record<SudokuDifficulty, number> = { easy: 300, normal: 540, hard: 900, expert: 1500 };
 
-/** 힌트: 처음 3개, 오늘의 퍼즐 한 판마다 1개, 세 판을 다 풀면 2개 더 */
+/** 힌트: 처음 3개, 오늘의 퍼즐 한 판마다 1개, 세 판을 다 풀면 2개 더, 별로 디저트가 열릴 때마다 1개 */
 export const HINT_START = 3;
+export const HINT_PER_UNLOCK = 1;
 export const HINT_PER_DAILY = 1;
 export const HINT_DAILY_BONUS = 2;
 

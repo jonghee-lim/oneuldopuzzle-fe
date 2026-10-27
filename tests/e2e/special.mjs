@@ -151,6 +151,9 @@ assert.equal(st.blockCleared, 1);
 assert.deepEqual(st.nonogramCleared, [0]);
 assert.ok(st.escapeBest[0] >= ESCAPES[0].minMoves);
 for (const k of ["zones:1", "sliding:1", "blocks:1", "nonogram:0", "escape:0"]) assert.ok(st.stars[k] >= 1, k);
+// 별 6개마다 디저트가 열리고 힌트 1개(처음 3개, 이 시험에선 힌트를 쓰지 않음)
+const totalStars = Object.values(st.stars).reduce((a, b) => a + b, 0);
+assert.equal(st.hints, 3 + Math.floor(totalStars / 6));
 if (shots) await page.screenshot({ path: `${shots}/s7-records.png`, fullPage: true });
 await page.goto(BASE);
 if (shots) await page.screenshot({ path: `${shots}/s8-home-after.png`, fullPage: true });

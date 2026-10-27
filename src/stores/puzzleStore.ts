@@ -1,9 +1,9 @@
 // 진행 상황·점수·설정을 기기에 저장합니다. 계정·동기화는 이후 단계에서 공용 API에 붙입니다.
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { HINT_START, blockStars, dailyHintReward, escapeStars, nonogramStars, slideStars, starCount, sudokuStars, zoneStars, type StarLine } from "../puzzle/core/score";
-import { keepBest, starKey } from "../puzzle/core/collection";
-import { dessertForLevel } from "../theme/palette";
+import { HINT_PER_UNLOCK, HINT_START, blockStars, dailyHintReward, escapeStars, nonogramStars, slideStars, starCount, sudokuStars, zoneStars, type StarLine } from "../puzzle/core/score";
+import { keepBest, newlyUnlocked, starKey, totalStarsOf } from "../puzzle/core/collection";
+import { DESSERTS, dessertForLevel, type DessertId } from "../theme/palette";
 import { dailyBlocks, dailyKinds, dailySlide, dailySudoku, dailyZones, dateKey, dayNumber, type DailyKind } from "../puzzle/core/daily";
 import { blocksForLevel } from "../puzzle/blocks/generator";
 import { newBlockGame, type BlockGame } from "../puzzle/blocks/game";
@@ -52,6 +52,8 @@ interface PuzzleState {
   /** 방금 푼 판에서 얻은 점수(완성 창에 보여 주고 저장하지 않음) */
   /** 방금 깬 레벨에서 받은 별(완성 창에 보여 줌) */
   lastStars: StarLine[] | null;
+  /** 방금 판으로 별이 쌓여 새로 열린 디저트(완성 창에 보여 줌) */
+  lastUnlock: DessertId | null;
   /** 레벨별 가장 많이 받은 별(키는 collection.starKey) */
   stars: Record<string, number>;
   /** 오늘의 퍼즐로 받은 디저트 수(디저트 id → 개수) */
@@ -117,6 +119,18 @@ function addTreat(treats: Record<string, number>, id: string): Record<string, nu
   return { ...treats, [id]: (treats[id] ?? 0) + 1 };
 }
 
+/** 한 판의 별을 기록하고, 별로 새 디저트가 열리면 힌트를 줍니다. */
+function gainStars(state: PuzzleState, key: string, lines: StarLine[]): Pick<PuzzleState, "stars" | "hints" | "lastStars" | "lastUnlock"> {
+  const stars = keepBest(state.stars, key, starCount(lines));
+  const opened = newlyUnlocked(totalStarsOf(state.stars), totalStarsOf(stars), DESSERTS.length);
+  return {
+    stars,
+    hints: state.hints + opened.length * HINT_PER_UNLOCK,
+    lastStars: lines,
+    lastUnlock: opened.length ? DESSERTS[opened[opened.length - 1]].id : null,
+  };
+}
+
 function addStat(stats: PuzzleState["stats"], key: StatKey, seconds: number): PuzzleState["stats"] {
   const prev = stats[key] ?? { cleared: 0, totalSeconds: 0 };
   return {
@@ -178,6 +192,7 @@ export const usePuzzleStore = create<PuzzleState>()(
       chosenDifficulty: null,
       stats: {},
       lastStars: null,
+      lastUnlock: null,
       stars: {},
       treats: {},
       zoneCleared: 0,
@@ -223,12 +238,11 @@ export const usePuzzleStore = create<PuzzleState>()(
           const best = get().bestSeconds[key];
           const lines = sudokuStars(game.difficulty, game.elapsedSeconds, !!game.usedCheck || !!game.usedHint);
           set({
-            stars: keepBest(get().stars, starKey.sudoku(game.difficulty, game.level), starCount(lines)),
+            ...gainStars(get(), starKey.sudoku(game.difficulty, game.level), lines),
             game,
             sudokuCleared: { ...get().sudokuCleared, [game.difficulty]: Math.max(get().sudokuCleared[game.difficulty] ?? 0, game.level) },
             bestSeconds: { ...get().bestSeconds, [key]: best ? Math.min(best, game.elapsedSeconds) : game.elapsedSeconds },
             stats: addStat(get().stats, game.difficulty, game.elapsedSeconds),
-            lastStars: lines,
           });
           return;
         }
@@ -254,9 +268,8 @@ export const usePuzzleStore = create<PuzzleState>()(
           set({
             zoneGame,
             zoneCleared: Math.max(get().zoneCleared, zoneGame.level),
-            stars: keepBest(get().stars, starKey.zones(zoneGame.level), starCount(lines)),
+            ...gainStars(get(), starKey.zones(zoneGame.level), lines),
             stats: addStat(get().stats, "zones", zoneGame.elapsedSeconds),
-            lastStars: lines,
           });
           return;
         }
@@ -280,9 +293,8 @@ export const usePuzzleStore = create<PuzzleState>()(
           set({
             slideGame,
             slideCleared: Math.max(get().slideCleared, slideGame.level),
-            stars: keepBest(get().stars, starKey.sliding(slideGame.level), starCount(lines)),
+            ...gainStars(get(), starKey.sliding(slideGame.level), lines),
             stats: addStat(get().stats, "sliding", slideGame.elapsedSeconds),
-            lastStars: lines,
           });
           return;
         }
@@ -306,9 +318,8 @@ export const usePuzzleStore = create<PuzzleState>()(
           set({
             blockGame,
             blockCleared: Math.max(get().blockCleared, blockGame.level),
-            stars: keepBest(get().stars, starKey.blocks(blockGame.level), starCount(lines)),
+            ...gainStars(get(), starKey.blocks(blockGame.level), lines),
             stats: addStat(get().stats, "blocks", blockGame.elapsedSeconds),
-            lastStars: lines,
           });
           return;
         }
@@ -319,8 +330,7 @@ export const usePuzzleStore = create<PuzzleState>()(
         const lines = nonogramStars(mistakes, helped);
         set({
           nonogramCleared: first ? [...get().nonogramCleared, stage] : get().nonogramCleared,
-          stars: keepBest(get().stars, starKey.nonogram(stage), starCount(lines)),
-          lastStars: lines,
+          ...gainStars(get(), starKey.nonogram(stage), lines),
         });
       },
       clearEscape: (stage, moves, minMoves, helped) => {
@@ -328,8 +338,7 @@ export const usePuzzleStore = create<PuzzleState>()(
         const lines = escapeStars(moves, minMoves, helped);
         set({
           escapeBest: best === undefined || moves < best ? { ...get().escapeBest, [stage]: moves } : get().escapeBest,
-          stars: keepBest(get().stars, starKey.escape(stage), starCount(lines)),
-          lastStars: lines,
+          ...gainStars(get(), starKey.escape(stage), lines),
         });
       },
 

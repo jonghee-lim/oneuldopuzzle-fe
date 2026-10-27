@@ -16,6 +16,13 @@ export function isUnlocked(index: number, id: string, totalStars: number, desser
   return index < unlockedByStars(totalStars, dessertCount) || (received[id] ?? 0) > 0;
 }
 
+/** 별이 늘면서 새로 열린 디저트의 도감 순서(없으면 빈 배열) */
+export function newlyUnlocked(before: number, after: number, dessertCount: number): number[] {
+  const from = unlockedByStars(before, dessertCount);
+  const to = unlockedByStars(after, dessertCount);
+  return Array.from({ length: Math.max(0, to - from) }, (_, i) => from + i);
+}
+
 /** 별 기록 합계 */
 export function totalStarsOf(stars: Readonly<Record<string, number>>): number {
   return Object.values(stars).reduce((a, b) => a + b, 0);

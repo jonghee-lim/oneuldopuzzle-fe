@@ -32,7 +32,7 @@ export default function DessertsPage() {
             <Typography sx={{ fontSize: 14, color: dessert.cocoaSoft, fontWeight: 600, ml: 0.25 }}>모은 별</Typography>
           </Box>
           <Typography sx={{ fontSize: 14, mt: 1, fontWeight: 600 }}>
-            {nextDessert && next !== null ? `별 ${next - total}개 더 모으면 다음 디저트가 열려요` : "별로 여는 디저트를 모두 열었어요!"}
+            {nextDessert && next !== null ? `별 ${next - total}개 더 모으면 다음 디저트와 힌트 1개` : "별로 여는 디저트를 모두 열었어요!"}
           </Typography>
           <LinearProgress
             variant="determinate"
