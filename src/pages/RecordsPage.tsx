@@ -50,7 +50,7 @@ export default function RecordsPage() {
           별 {total.toLocaleString("ko-KR")}개 · 스도쿠 {sudokuCleared}판 · 보너스 {clearedOf("zones") + clearedOf("sliding") + clearedOf("blocks")}판 · 스페셜 {clearedOf("nonogram") + clearedOf("escape")}판
         </Typography>
 
-        <Section title="클래식 스도쿠" stars={starsOf("sudoku")}>
+        <Section title="스도쿠" stars={starsOf("sudoku")}>
           <Table
             head={["난이도", "푼 판", "최고 기록", "평균"]}
             rows={(Object.keys(DIFFICULTY_LABEL) as SudokuDifficulty[]).map((d) => [DIFFICULTY_LABEL[d], ...statCells(stats[d])])}

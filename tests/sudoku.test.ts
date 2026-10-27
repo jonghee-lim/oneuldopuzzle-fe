@@ -100,3 +100,22 @@ test("레벨 난이도 표", () => {
   assert.equal(difficultyForLevel(50), "expert");
   assert.equal(puzzleForLevel(3).id, "sudoku-level-3");
 });
+
+test("미니 6×6: 상자는 가로 3 × 세로 2, 답이 하나이고 단서 찾기만으로 풀린다", async () => {
+  const { MINI, shapeOf, findConflicts: conflicts } = await import("../src/puzzle/sudoku/rules.ts");
+  assert.equal(MINI.units.length, 18);
+  assert.deepEqual([...MINI.units[12]], [0, 1, 2, 6, 7, 8]);
+  assert.deepEqual([...MINI.units[13]], [3, 4, 5, 9, 10, 11]);
+  assert.equal(MINI.peers[0].length, 12);
+  for (let n = 0; n < 20; n += 1) {
+    const p = generateSudoku(`mini-${n}`, "mini");
+    assert.equal(p.puzzle.length, 36);
+    assert.equal(shapeOf(p.puzzle), MINI);
+    assert.equal(checkSudoku(p.puzzle, p.solution).ok, true);
+    assert.equal(conflicts(p.solution).size, 0);
+    assert.ok(p.solution.every((v) => v >= 1 && v <= 6));
+    assert.equal(solveWithSingles(p.puzzle).solved, true);
+    assert.deepEqual(rateSudoku(p.puzzle).grade, 1);
+  }
+  assert.equal(puzzleForLevel(1, "mini").puzzle.length, 36);
+});

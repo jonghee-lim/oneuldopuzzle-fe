@@ -1,7 +1,7 @@
 // 사람이 쓰는 풀이 기술로 스도쿠를 풉니다(2026-10-27). 어려움·아주 어려움 문제를 '찍지 않고 풀리는' 판으로 고르고,
 // 필요한 가장 어려운 기술로 난이도를 매기며, 힌트가 그 기술을 판에 비춰 가르칠 때 씁니다.
 // 기술 단계: 1 단서 찾기(하나뿐인 숫자·숨은 자리) · 2 한 줄 몰림·짝 숫자 · 3 세 칸 묶음·X날개·XY날개·황새치
-import { ALL_DIGITS, CELLS, PEERS, UNITS, bitCount, type SudokuGrid } from "./rules.ts";
+import { bitCount, shapeOf, type Shape, type SudokuGrid } from "./rules.ts";
 
 export type Technique =
   | "nakedSingle"
@@ -56,11 +56,12 @@ export interface TechStep {
 
 /** 판의 숫자에서 칸마다 후보를 셉니다(사용자 메모는 보지 않음). */
 export function candidatesOf(values: SudokuGrid): number[] {
+  const { peers, all } = shapeOf(values);
   return values.map((v, i) => {
     if (v) return 0;
     let used = 0;
-    for (const p of PEERS[i]) if (values[p]) used |= 1 << values[p];
-    return ALL_DIGITS & ~used;
+    for (const p of peers[i]) if (values[p]) used |= 1 << values[p];
+    return all & ~used;
   });
 }
 
@@ -79,12 +80,14 @@ function combos<T>(items: readonly T[], k: number): T[][] {
   return out;
 }
 
-const sees = (a: number, b: number) => a !== b && PEERS[a].includes(b);
 
 interface State {
+  shape: Shape;
   values: number[];
   cands: number[];
 }
+
+const stateOf = (grid: SudokuGrid): State => ({ shape: shapeOf(grid), values: grid.slice(), cands: candidatesOf(grid) });
 
 function eliminations(state: State, cells: Iterable<number>, mask: number): { index: number; digit: number }[] {
   const out: { index: number; digit: number }[] = [];
@@ -95,8 +98,8 @@ function eliminations(state: State, cells: Iterable<number>, mask: number): { in
   return out;
 }
 
-function nakedSingle({ values, cands }: State): TechStep | null {
-  for (let i = 0; i < CELLS; i += 1) {
+function nakedSingle({ shape, values, cands }: State): TechStep | null {
+  for (let i = 0; i < shape.cells; i += 1) {
     if (values[i] || bitCount(cands[i]) !== 1) continue;
     const digit = Math.log2(cands[i]);
     return { technique: "nakedSingle", place: { index: i, digit }, eliminate: [], cells: [i], digits: [digit], units: [] };
@@ -104,9 +107,10 @@ function nakedSingle({ values, cands }: State): TechStep | null {
   return null;
 }
 
-function hiddenSingle({ values, cands }: State): TechStep | null {
+function hiddenSingle({ shape, values, cands }: State): TechStep | null {
+  const UNITS = shape.units;
   for (let u = 0; u < UNITS.length; u += 1) {
-    for (let d = 1; d <= 9; d += 1) {
+    for (const d of shape.digits) {
       if (UNITS[u].some((i) => values[i] === d)) continue;
       const spots = UNITS[u].filter((i) => !values[i] && cands[i] & (1 << d));
       if (spots.length === 1) return { technique: "hiddenSingle", place: { index: spots[0], digit: d }, eliminate: [], cells: [spots[0]], digits: [d], units: [u] };
@@ -117,10 +121,11 @@ function hiddenSingle({ values, cands }: State): TechStep | null {
 
 /** 한 줄 몰림: 상자 안에서 숫자가 한 줄에만 있으면 그 줄의 상자 밖에서 지움. 한 상자 몰림: 줄 안에서 한 상자에만 있으면 그 상자의 줄 밖에서 지움. */
 function locked(state: State): TechStep | null {
+  const { units: UNITS, size, digits } = state.shape;
   for (let pass = 0; pass < 2; pass += 1) {
-    const [from, to] = pass === 0 ? [[18, 27], [0, 18]] : [[0, 18], [18, 27]];
+    const [from, to] = pass === 0 ? [[2 * size, 3 * size], [0, 2 * size]] : [[0, 2 * size], [2 * size, 3 * size]];
     for (let u = from[0]; u < from[1]; u += 1) {
-      for (let d = 1; d <= 9; d += 1) {
+      for (const d of digits) {
         const spots = UNITS[u].filter((i) => !state.values[i] && state.cands[i] & (1 << d));
         if (spots.length < 2) continue;
         for (let v = to[0]; v < to[1]; v += 1) {
@@ -135,6 +140,7 @@ function locked(state: State): TechStep | null {
 }
 
 function nakedSet(state: State, k: number): TechStep | null {
+  const UNITS = state.shape.units;
   for (let u = 0; u < UNITS.length; u += 1) {
     const open = UNITS[u].filter((i) => !state.values[i] && bitCount(state.cands[i]) <= k);
     for (const group of combos(open, k)) {
@@ -148,14 +154,15 @@ function nakedSet(state: State, k: number): TechStep | null {
 }
 
 function hiddenSet(state: State, k: number): TechStep | null {
+  const { units: UNITS, digits, all } = state.shape;
   for (let u = 0; u < UNITS.length; u += 1) {
-    const missing = [1, 2, 3, 4, 5, 6, 7, 8, 9].filter((d) => !UNITS[u].some((i) => state.values[i] === d));
+    const missing = digits.filter((d) => !UNITS[u].some((i) => state.values[i] === d));
     for (const group of combos(missing, k)) {
       const mask = group.reduce((m, d) => m | (1 << d), 0);
       const spots = UNITS[u].filter((i) => !state.values[i] && state.cands[i] & mask);
       if (spots.length !== k) continue;
       if (!group.every((d) => spots.some((i) => state.cands[i] & (1 << d)))) continue;
-      const eliminate = eliminations(state, spots, ALL_DIGITS & ~mask);
+      const eliminate = eliminations(state, spots, all & ~mask);
       if (eliminate.length) return { technique: k === 2 ? "hiddenPair" : "hiddenTriple", eliminate, cells: spots, digits: group, units: [u] };
     }
   }
@@ -164,12 +171,13 @@ function hiddenSet(state: State, k: number): TechStep | null {
 
 /** X날개(n=2)·황새치(n=3): n개 줄에서 숫자 자리가 같은 n개 칸줄 안에만 있으면 그 칸줄의 나머지에서 지움(가로·세로 둘 다). */
 function fish(state: State, n: number): TechStep | null {
+  const { units: UNITS, size, digits } = state.shape;
   for (let pass = 0; pass < 2; pass += 1) {
-    const base = pass === 0 ? 0 : 9;
-    const cover = pass === 0 ? 9 : 0;
-    const line = (i: number) => (pass === 0 ? i % 9 : Math.floor(i / 9));
-    for (let d = 1; d <= 9; d += 1) {
-      const lines = Array.from({ length: 9 }, (_, k) => base + k).filter((u) => {
+    const base = pass === 0 ? 0 : size;
+    const cover = pass === 0 ? size : 0;
+    const line = (i: number) => (pass === 0 ? i % size : Math.floor(i / size));
+    for (const d of digits) {
+      const lines = Array.from({ length: size }, (_, k) => base + k).filter((u) => {
         const count = UNITS[u].filter((i) => !state.values[i] && state.cands[i] & (1 << d)).length;
         return count >= 2 && count <= n;
       });
@@ -188,6 +196,8 @@ function fish(state: State, n: number): TechStep | null {
 
 /** XY날개: 후보 두 개인 가운데 칸(xy)이 xz 칸과 yz 칸을 보면, 두 날개 칸을 함께 보는 칸에서 z를 지움. */
 function xyWing(state: State): TechStep | null {
+  const PEERS = state.shape.peers;
+  const sees = (a: number, b: number) => a !== b && PEERS[a].includes(b);
   const pairs = state.cands.flatMap((m, i) => (!state.values[i] && bitCount(m) === 2 ? [i] : []));
   for (const pivot of pairs) {
     const [x, y] = digitsOf(state.cands[pivot]);
@@ -223,7 +233,7 @@ function applyStep(state: State, step: TechStep): void {
     const { index, digit } = step.place;
     state.values[index] = digit;
     state.cands[index] = 0;
-    for (const p of PEERS[index]) state.cands[p] &= ~(1 << digit);
+    for (const p of state.shape.peers[index]) state.cands[p] &= ~(1 << digit);
   }
   for (const { index, digit } of step.eliminate) state.cands[index] &= ~(1 << digit);
 }
@@ -247,7 +257,7 @@ export interface Rating {
 
 /** 기술만으로 풀어 본 차례(맞는지는 tests/sudoku.test.ts가 답과 맞춰 봄). 후보가 바닥난 칸이 생기면(답이 없는 판) 멈춥니다. */
 export function solveSteps(grid: SudokuGrid, maxGrade = 3): { solved: boolean; steps: TechStep[] } {
-  const state: State = { values: grid.slice(), cands: candidatesOf(grid) };
+  const state = stateOf(grid);
   const steps: TechStep[] = [];
   for (;;) {
     if (state.values.every(Boolean)) return { solved: true, steps };
@@ -272,7 +282,7 @@ export function rateSudoku(grid: SudokuGrid, maxGrade = 3): Rating {
  * 지우기 없이 단서로 바로 넣을 수 있으면 eliminations는 비어 있습니다. 기술로 못 찾으면 null.
  */
 export function nextPlacement(values: SudokuGrid): { place: TechStep; eliminations: TechStep[] } | null {
-  const state: State = { values: values.slice(), cands: candidatesOf(values) };
+  const state = stateOf(values);
   const steps: TechStep[] = [];
   for (let guard = 0; guard < 200; guard += 1) {
     const step = nextStep(state, 3);

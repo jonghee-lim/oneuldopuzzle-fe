@@ -4,12 +4,14 @@ import { createRng, seedFrom, shuffle, type Rng } from "../core/rng.ts";
 import { checkSudoku } from "./checker.ts";
 import { solveWithSingles } from "./logic.ts";
 import { rateSudoku } from "./techniques.ts";
-import { CELLS, type SudokuGrid } from "./rules.ts";
+import { CLASSIC, MINI, type Shape, type SudokuGrid } from "./rules.ts";
 import { solve } from "./solver.ts";
 
-export type SudokuDifficulty = "easy" | "normal" | "hard" | "expert";
+/** mini는 6×6 미니 판(입문, 2026-10-27). 나머지는 9×9 */
+export type SudokuDifficulty = "mini" | "easy" | "normal" | "hard" | "expert";
 
 export const DIFFICULTY_LABEL: Record<SudokuDifficulty, string> = {
+  mini: "미니 6×6",
   easy: "쉬움",
   normal: "보통",
   hard: "어려움",
@@ -18,6 +20,7 @@ export const DIFFICULTY_LABEL: Record<SudokuDifficulty, string> = {
 
 /** 난이도마다 필요한 풀이 기술(고르는 화면에 보여 줌, 2026-10-27) */
 export const DIFFICULTY_SKILL: Record<SudokuDifficulty, string> = {
+  mini: "1~6만 쓰는 작은 판이에요. 스도쿠가 처음이면 여기서 시작해요.",
   easy: "단서가 많아요. 칸마다 들어갈 숫자 하나를 찾아요.",
   normal: "줄·상자에서 숫자가 갈 자리를 찾아요.",
   hard: "메모를 켜고 '한 줄 몰림'·'짝 숫자'로 후보를 지워야 풀려요.",
@@ -32,9 +35,11 @@ interface DifficultyRule {
    * 그 단계까지의 기술만으로 풀려야 하고(찍지 않음), 2·3은 그 단계 기술이 꼭 한 번은 필요해야 합니다.
    */
   grade: 1 | 2 | 3;
+  shape?: Shape;
 }
 
 const RULES: Record<SudokuDifficulty, DifficultyRule> = {
+  mini: { targetClues: 14, grade: 1, shape: MINI },
   easy: { targetClues: 40, grade: 1 },
   normal: { targetClues: 32, grade: 1 },
   hard: { targetClues: 24, grade: 2 },
@@ -54,21 +59,22 @@ export interface SudokuPuzzle {
   solution: SudokuGrid;
 }
 
-function randomSolution(rng: Rng): SudokuGrid {
-  const empty = new Array<number>(CELLS).fill(0);
-  const order = shuffle([1, 2, 3, 4, 5, 6, 7, 8, 9], rng);
+function randomSolution(rng: Rng, shape: Shape): SudokuGrid {
+  const empty = new Array<number>(shape.cells).fill(0);
+  const order = shuffle([...shape.digits], rng);
   // 첫 줄을 무작위로 깔면 같은 순서로 넣어도 판이 다양해집니다.
-  for (let c = 0; c < 9; c += 1) empty[c] = order[c];
-  const { solution } = solve(empty, 1, shuffle([1, 2, 3, 4, 5, 6, 7, 8, 9], rng));
+  for (let c = 0; c < shape.size; c += 1) empty[c] = order[c];
+  const { solution } = solve(empty, 1, shuffle([...shape.digits], rng));
   if (!solution) throw new Error("완성판을 만들지 못했습니다.");
   return solution;
 }
 
 function carve(solution: SudokuGrid, rule: DifficultyRule, rng: Rng): SudokuGrid {
   const puzzle = solution.slice();
+  const CELLS = solution.length;
   let clues = CELLS;
   // 가운데를 기준으로 마주 보는 두 칸을 함께 지워 판이 고르게 보이게 합니다.
-  const positions = shuffle(Array.from({ length: 41 }, (_, i) => i), rng);
+  const positions = shuffle(Array.from({ length: Math.ceil(CELLS / 2) }, (_, i) => i), rng);
   for (const i of positions) {
     if (clues <= rule.targetClues) break;
     const mirror = CELLS - 1 - i;
@@ -97,7 +103,7 @@ export function generateSudoku(seed: string, difficulty: SudokuDifficulty): Sudo
   const rng = createRng(seedFrom(`${seed}:${difficulty}`));
   // 난이도 조건에 맞는 문제가 나올 때까지 다시 만듭니다. 아주 어려움도 보통 몇 번 안에 나옵니다.
   for (let attempt = 0; attempt < 300; attempt += 1) {
-    const solution = randomSolution(rng);
+    const solution = randomSolution(rng, rule.shape ?? CLASSIC);
     const puzzle = carve(solution, rule, rng);
     if (!fits(puzzle, rule) && attempt < 299) continue;
     const check = checkSudoku(puzzle, solution);

@@ -6,10 +6,12 @@ interface Props {
   notes: number;
   given: boolean;
   conflict: boolean;
+  /** 판 크기(미니 6×6이면 메모를 3×2로) */
+  size?: number;
 }
 
-/** 칸 안 숫자 또는 작은 메모 9칸 */
-export default function SudokuCellContent({ value, notes, given, conflict }: Props) {
+/** 칸 안 숫자 또는 작은 메모 9칸(미니는 6칸) */
+export default function SudokuCellContent({ value, notes, given, conflict, size = 9 }: Props) {
   if (value) {
     return (
       <Box
@@ -17,7 +19,7 @@ export default function SudokuCellContent({ value, notes, given, conflict }: Pro
         className="sudoku-value"
         sx={{
           position: "relative",
-          fontSize: "clamp(18px, 6.2vw, 30px)",
+          fontSize: size === 9 ? "clamp(18px, 6.2vw, 30px)" : "clamp(26px, 9vw, 40px)",
           fontWeight: given ? 700 : 600,
           lineHeight: 1,
           // 내가 넣은 숫자는 민트로, 빨강은 겹친 숫자에만 씁니다(분홍이 틀린 숫자처럼 보인다는 의견, 2026-10-25).
@@ -37,14 +39,14 @@ export default function SudokuCellContent({ value, notes, given, conflict }: Pro
         inset: "2px",
         display: "grid",
         gridTemplateColumns: "repeat(3, 1fr)",
-        gridTemplateRows: "repeat(3, 1fr)",
-        fontSize: "clamp(8px, 2.4vw, 12px)",
+        gridTemplateRows: `repeat(${size / 3}, 1fr)`,
+        fontSize: size === 9 ? "clamp(8px, 2.4vw, 12px)" : "clamp(11px, 3.4vw, 16px)",
         fontWeight: 600,
         lineHeight: 1,
         color: dessert.cocoaSoft,
       }}
     >
-      {Array.from({ length: 9 }, (_, k) => (
+      {Array.from({ length: size }, (_, k) => (
         <Box key={k} component="span" sx={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
           {notes & (1 << (k + 1)) ? k + 1 : ""}
         </Box>

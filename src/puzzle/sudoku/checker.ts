@@ -1,6 +1,6 @@
 // 문제 검사기: 판이 올바른 모양인지, 처음 숫자끼리 겹치지 않는지, 답이 정확히 하나인지 확인합니다.
 // 이 검사를 통과한 문제만 사용자에게 내보냅니다(설계서: 틀린 문제는 하나도 내보내지 않는다).
-import { CELLS, findConflicts, type SudokuGrid } from "./rules.ts";
+import { CELLS, MINI, findConflicts, shapeOf, type SudokuGrid } from "./rules.ts";
 import { solve } from "./solver.ts";
 
 export type CheckFailure = "shape" | "conflict" | "no-solution" | "multiple-solutions" | "solution-mismatch";
@@ -10,7 +10,7 @@ export type CheckResult =
   | { ok: false; reason: CheckFailure };
 
 export function checkSudoku(puzzle: SudokuGrid, expectedSolution?: SudokuGrid): CheckResult {
-  if (puzzle.length !== CELLS || puzzle.some((v) => !Number.isInteger(v) || v < 0 || v > 9)) {
+  if ((puzzle.length !== CELLS && puzzle.length !== MINI.cells) || puzzle.some((v) => !Number.isInteger(v) || v < 0 || v > shapeOf(puzzle).size)) {
     return { ok: false, reason: "shape" };
   }
   if (findConflicts(puzzle).size > 0) return { ok: false, reason: "conflict" };

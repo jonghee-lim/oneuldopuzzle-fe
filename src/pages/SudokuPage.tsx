@@ -9,6 +9,8 @@ import { sudokuNext, usePuzzleStore } from "../stores/puzzleStore";
 import { dessert } from "../theme/palette";
 import { radius } from "../theme/shape";
 
+const CLASSIC_DIFFICULTIES: SudokuDifficulty[] = ["easy", "normal", "hard", "expert"];
+
 /** 스도쿠 첫 화면: 난이도를 고르고 그 난이도의 다음 레벨을 시작합니다. 레벨은 난이도마다 따로 이어집니다. */
 export default function SudokuPage() {
   const navigate = useNavigate();
@@ -24,7 +26,7 @@ export default function SudokuPage() {
 
   return (
     <Page>
-      <PuzzleHeader title="클래식 스도쿠" subtitle="가로·세로·상자마다 1~9" />
+      <PuzzleHeader title="스도쿠" subtitle="가로·세로·상자마다 숫자 하나씩" />
       <Box sx={{ px: 2, pt: 1 }}>
         <Box component="section" aria-labelledby="level-title" sx={{ borderRadius: radius.card, bgcolor: dessert.paper, overflow: "hidden", boxShadow: "0 1px 2px rgba(78,59,46,.06), 0 8px 24px rgba(78,59,46,.06)" }}>
           <Box sx={{ display: "flex", alignItems: "center", gap: 2, px: 2.5, pt: 2.5, pb: 2, bgcolor: dessert.strawberryMilk }}>
@@ -42,7 +44,7 @@ export default function SudokuPage() {
               난이도
             </Typography>
             <ToggleButtonGroup exclusive fullWidth value={difficulty} onChange={(_, v: SudokuDifficulty | null) => v && chooseDifficulty(v)} aria-labelledby="difficulty-label">
-              {(Object.keys(DIFFICULTY_LABEL) as SudokuDifficulty[]).map((d) => (
+              {CLASSIC_DIFFICULTIES.map((d) => (
                 <ToggleButton
                   key={d}
                   value={d}
@@ -64,6 +66,21 @@ export default function SudokuPage() {
                   </Box>
                 </ToggleButton>
               ))}
+            </ToggleButtonGroup>
+            {/* 미니 6×6은 입문용이라 아래 한 줄로 따로 둡니다(위 난이도와 함께 하나만 고름). */}
+            <ToggleButtonGroup exclusive fullWidth value={difficulty} onChange={(_, v: SudokuDifficulty | null) => v && chooseDifficulty(v)} aria-label="미니 판" sx={{ mt: 1 }}>
+              <ToggleButton
+                value="mini"
+                aria-label={DIFFICULTY_LABEL.mini}
+                sx={{ height: 44, gap: 1, justifyContent: "space-between", px: 2, "&.Mui-selected, &.Mui-selected:hover": { bgcolor: dessert.mint, color: dessert.cocoa } }}
+              >
+                <Box component="span" sx={{ fontSize: 14, fontWeight: 700 }}>
+                  {DIFFICULTY_LABEL.mini} <Box component="span" sx={{ fontWeight: 600, color: dessert.cocoaSoft }}>· 처음이라면</Box>
+                </Box>
+                <Box component="span" aria-hidden sx={{ fontSize: 12, fontWeight: 600, color: dessert.cocoaSoft, fontVariantNumeric: "tabular-nums" }}>
+                  레벨 {(sudokuCleared.mini ?? 0) + 1}
+                </Box>
+              </ToggleButton>
             </ToggleButtonGroup>
             {/* 고른 난이도에 필요한 기술. 두 줄 높이를 늘 잡아 두어 난이도를 바꿔도 버튼이 움직이지 않습니다. */}
             <Typography sx={{ mt: 1.25, fontSize: 13, lineHeight: 1.45, minHeight: "2.9em", color: dessert.cocoaSoft }}>{DIFFICULTY_SKILL[difficulty]}</Typography>
