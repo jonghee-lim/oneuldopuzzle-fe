@@ -11,6 +11,10 @@ const browser = await chromium.launch(process.env.CHROME_PATH ? { executablePath
 const page = await browser.newPage({ ...devices["iPhone 13"] });
 const errors = [];
 page.on("pageerror", (e) => errors.push(String(e)));
+// 하는 법(처음 열 때 저절로 뜸)은 따로 확인하고, 여기서는 이미 본 것으로 둡니다.
+await page.addInitScript(() => {
+  if (!localStorage.getItem("oneuldopuzzle-guide-seen")) localStorage.setItem("oneuldopuzzle-guide-seen", JSON.stringify(["sudoku", "zones", "nonogram", "escape", "sliding", "blocks"]));
+});
 // 공유 창은 브라우저마다 달라서, 보낸 내용만 받아 둡니다.
 await page.addInitScript(() => {
   window.__shared = [];

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import PuzzleThumb from "../components/home/PuzzleThumb";
 import Page from "../components/layout/Page";
 import PuzzleHeader from "../components/layout/PuzzleHeader";
+import { useGuide } from "../components/guide/useGuide";
 import { DIFFICULTY_LABEL, DIFFICULTY_SKILL, type SudokuDifficulty } from "../puzzle/sudoku/generator";
 import { formatTime, hasProgress } from "../puzzle/sudoku/game";
 import { sudokuNext, usePuzzleStore } from "../stores/puzzleStore";
@@ -14,6 +15,7 @@ const CLASSIC_DIFFICULTIES: SudokuDifficulty[] = ["easy", "normal", "hard", "exp
 /** 스도쿠 첫 화면: 난이도를 고르고 그 난이도의 다음 레벨을 시작합니다. 레벨은 난이도마다 따로 이어집니다. */
 export default function SudokuPage() {
   const navigate = useNavigate();
+  const guide = useGuide("sudoku", false);
   const sudokuCleared = usePuzzleStore((s) => s.sudokuCleared);
   const chosenDifficulty = usePuzzleStore((s) => s.chosenDifficulty);
   const chooseDifficulty = usePuzzleStore((s) => s.chooseDifficulty);
@@ -26,7 +28,8 @@ export default function SudokuPage() {
 
   return (
     <Page>
-      <PuzzleHeader title="스도쿠" subtitle="가로·세로·상자마다 숫자 하나씩" />
+      <PuzzleHeader title="스도쿠" subtitle="가로·세로·상자마다 숫자 하나씩" help={guide.button} />
+      {guide.dialog}
       <Box sx={{ px: 2, pt: 1 }}>
         <Box component="section" aria-labelledby="level-title" sx={{ borderRadius: radius.card, bgcolor: dessert.paper, overflow: "hidden", boxShadow: "0 1px 2px rgba(78,59,46,.06), 0 8px 24px rgba(78,59,46,.06)" }}>
           <Box sx={{ display: "flex", alignItems: "center", gap: 2, px: 2.5, pt: 2.5, pb: 2, bgcolor: dessert.strawberryMilk }}>

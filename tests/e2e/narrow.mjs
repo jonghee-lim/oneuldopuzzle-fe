@@ -16,6 +16,10 @@ for (const width of [320, 360]) {
   const page = await browser.newPage({ ...devices["iPhone 13"], viewport: { width, height: 640 } });
   const errors = [];
   page.on("pageerror", (e) => errors.push(String(e)));
+  // 하는 법(처음 열 때 저절로 뜸)은 따로 확인하고, 여기서는 이미 본 것으로 둡니다.
+  await page.addInitScript(() => {
+    if (!localStorage.getItem("oneuldopuzzle-guide-seen")) localStorage.setItem("oneuldopuzzle-guide-seen", JSON.stringify(["sudoku", "zones", "nonogram", "escape", "sliding", "blocks"]));
+  });
   // 화면 밖으로 나간 글자·아이콘(자식 없는 요소)을 찾습니다. 화면 너비가 늘었는지(iOS가 줄여 보이는 경우)도 봅니다.
   const check = async (where) => {
     const found = await page.evaluate((W) => {
@@ -61,6 +65,20 @@ for (const width of [320, 360]) {
       await page.waitForTimeout(400);
       await check(`${route} 힌트`);
       if (shots && width === 320) await page.screenshot({ path: `${shots}/n-${width}${route.replace(/[/?]/g, "_")}.png` });
+    }
+    // 하는 법: 단계마다 예시 판이 화면 안에 들어오는지
+    const help = page.getByRole("button", { name: "하는 법" });
+    if (await help.count()) {
+      await help.tap();
+      for (let step = 1; step < 6; step += 1) {
+        await page.waitForTimeout(250);
+        await check(`${route} 하는 법 ${step}`);
+        if (shots && width === 320) await page.screenshot({ path: `${shots}/g-${width}${route.replace(/[/?]/g, "_")}-${step}.png` });
+        const next = page.getByRole("button", { name: "다음" });
+        if (!(await next.count())) break;
+        await next.tap();
+      }
+      await page.getByRole("button", { name: "시작하기" }).tap();
     }
   }
   assert.deepEqual(errors, []);

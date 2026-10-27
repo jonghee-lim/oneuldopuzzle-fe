@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import PuzzleThumb from "../components/home/PuzzleThumb";
 import Page from "../components/layout/Page";
 import PuzzleHeader from "../components/layout/PuzzleHeader";
+import { useGuide } from "../components/guide/useGuide";
 import { TIER_INFO, tierResume } from "../components/tier/tierInfo";
 import { TIER_PLAY_ROUTE } from "../components/tier/tierRoutes";
 import { useTierNext } from "../components/tier/useTier";
@@ -16,6 +17,7 @@ import { radius } from "../theme/shape";
 export default function TierPage({ puzzle }: { puzzle: TierPuzzle }) {
   const navigate = useNavigate();
   const info = TIER_INFO[puzzle];
+  const guide = useGuide(puzzle, false);
   const { tier, level } = useTierNext(puzzle);
   const cleared = usePuzzleStore((s) => s.tierCleared[puzzle]);
   const chooseTier = usePuzzleStore((s) => s.chooseTier);
@@ -24,7 +26,8 @@ export default function TierPage({ puzzle }: { puzzle: TierPuzzle }) {
 
   return (
     <Page>
-      <PuzzleHeader title={info.title} subtitle={info.rule} />
+      <PuzzleHeader title={info.title} subtitle={info.rule} help={guide.button} />
+      {guide.dialog}
       <Box sx={{ px: 2, pt: 1 }}>
         <Box component="section" aria-labelledby="level-title" sx={{ borderRadius: radius.card, bgcolor: dessert.paper, overflow: "hidden", boxShadow: "0 1px 2px rgba(78,59,46,.06), 0 8px 24px rgba(78,59,46,.06)" }}>
           <Box sx={{ display: "flex", alignItems: "center", gap: 2, px: 2.5, pt: 2.5, pb: 2, bgcolor: info.tint }}>

@@ -26,6 +26,7 @@ import { useIsDaily } from "../components/daily/daily";
 import { useDailyClear } from "../components/daily/useDailyClear";
 import ClearDialog from "../components/puzzle/ClearDialog";
 import { useHint } from "../components/puzzle/useHint";
+import { useGuide } from "../components/guide/useGuide";
 import { flash, popIn } from "../theme/motion";
 import { dessert } from "../theme/palette";
 import { TECHNIQUE_NAME } from "../puzzle/sudoku/techniques";
@@ -53,6 +54,7 @@ export default function PlayPage() {
   const read = () => (daily ? usePuzzleStore.getState().dailySudoku : usePuzzleStore.getState().game);
   // 시계가 돌 때마다 판 객체가 바뀌므로, 놓인 내용이 바뀔 때만 힌트 단계를 처음부터 셉니다.
   const hint = useHint(game?.values.join(","), game ? shapeOf(game.values).size : 9);
+  const guide = useGuide("sudoku");
   const dailyClear = useDailyClear(game?.elapsedSeconds ?? 0);
   const [confirmRestart, setConfirmRestart] = useState(false);
   const lastStars = usePuzzleStore((s) => s.lastStars);
@@ -150,6 +152,7 @@ export default function PlayPage() {
             <Typography sx={{ fontSize: 13, color: "text.secondary", lineHeight: 1.3 }}>{DIFFICULTY_LABEL[game.difficulty]}</Typography>
           </Box>
         </Box>
+        {guide.button}
         <Typography aria-label="걸린 시간" sx={{ width: 56, textAlign: "right", pr: 1, fontVariantNumeric: "tabular-nums", color: "text.secondary", fontWeight: 600 }}>
           {formatTime(game.elapsedSeconds)}
         </Typography>
@@ -268,6 +271,7 @@ export default function PlayPage() {
         />
       )}
       {hint.toast}
+      {guide.dialog}
       <Dialog open={!daily && game.completed} slotProps={{ paper: { sx: { width: "min(360px, calc(100% - 32px))", p: 3, textAlign: "center", bgcolor: dessert.cream } } }}>
         <Box sx={{ display: "flex", justifyContent: "center", ...popIn }}>
           <PuzzleThumb kind="sudoku" size={96} />

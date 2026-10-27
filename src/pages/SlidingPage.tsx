@@ -8,6 +8,7 @@ import { useEffect, useMemo, useState } from "react";
 import DessertArt from "../components/dessert/DessertArt";
 import Page from "../components/layout/Page";
 import PuzzleHeader from "../components/layout/PuzzleHeader";
+import { useGuide } from "../components/guide/useGuide";
 import ClearDialog from "../components/puzzle/ClearDialog";
 import ConfirmRestart from "../components/puzzle/ConfirmRestart";
 import PuzzleBoard from "../components/puzzle/PuzzleBoard";
@@ -33,6 +34,7 @@ export default function SlidingPage() {
   const updateSlide = usePuzzleStore((s) => (daily ? s.updateDailySlide : s.updateSlide));
   const startDailySlide = usePuzzleStore((s) => s.startDailySlide);
   const hint = useHint(game?.board.join(","), game?.puzzle.size);
+  const guide = useGuide("sliding");
   const dailyClear = useDailyClear(game?.elapsedSeconds ?? 0);
   const lastStars = usePuzzleStore((s) => s.lastStars);
   const [confirm, setConfirm] = useState(false);
@@ -95,7 +97,7 @@ export default function SlidingPage() {
 
   return (
     <Page>
-      <PuzzleHeader
+      <PuzzleHeader help={guide.button}
         title={daily ? "오늘의 퍼즐" : `레벨 ${game.level}`}
         subtitle={`슬라이딩 · ${daily ? "" : `${TIER_LABEL[game.tier ?? "easy"]} · `}${size}×${size}`}
         back={daily ? undefined : { to: TIER_ROUTE.sliding, label: "슬라이딩 화면으로" }}
@@ -175,6 +177,7 @@ export default function SlidingPage() {
         stars={daily ? null : lastStars}
       />
       {hint.toast}
+      {guide.dialog}
     </Page>
   );
 }

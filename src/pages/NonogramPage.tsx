@@ -10,6 +10,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import DessertArt from "../components/dessert/DessertArt";
 import Page from "../components/layout/Page";
 import PuzzleHeader from "../components/layout/PuzzleHeader";
+import { useGuide } from "../components/guide/useGuide";
 import ClearDialog from "../components/puzzle/ClearDialog";
 import ConfirmRestart from "../components/puzzle/ConfirmRestart";
 import PuzzleBoard from "../components/puzzle/PuzzleBoard";
@@ -39,6 +40,7 @@ function NonogramLevel({ game }: { game: NonogramGame }) {
   const startNonogram = usePuzzleStore((s) => s.startNonogram);
   const [confirm, setConfirm] = useState(false);
   const hint = useHint(game.cells.join(""), game.width);
+  const guide = useGuide("nonogram");
   const { width, height } = game;
   const doneRows = useMemo(() => Array.from({ length: height }, (_, r) => rowDone(game, r)), [game, height]);
   const doneCols = useMemo(() => Array.from({ length: width }, (_, c) => colDone(game, c)), [game, width]);
@@ -58,7 +60,7 @@ function NonogramLevel({ game }: { game: NonogramGame }) {
 
   return (
     <Page>
-      <PuzzleHeader title={`레벨 ${game.level}`} subtitle={`노노그램 · ${TIER_LABEL[tier]} · ${height}×${width}${picture ? " · 그림" : ""}`} back={{ to: TIER_ROUTE.nonogram, label: "노노그램 화면으로" }} />
+      <PuzzleHeader help={guide.button} title={`레벨 ${game.level}`} subtitle={`노노그램 · ${TIER_LABEL[tier]} · ${height}×${width}${picture ? " · 그림" : ""}`} back={{ to: TIER_ROUTE.nonogram, label: "노노그램 화면으로" }} />
 
       {/* 위 단서는 판의 열에, 왼쪽 단서는 판의 행에 맞춰 같은 격자에 둡니다. */}
       <Box sx={{ px: 1.5, pt: 2, display: "grid", gridTemplateColumns: "auto minmax(0, 1fr)", gridTemplateRows: "auto auto", columnGap: 0.75, rowGap: 0.75 }}>
@@ -183,6 +185,7 @@ function NonogramLevel({ game }: { game: NonogramGame }) {
         onNext={() => startNonogram()}
       />
       {hint.toast}
+      {guide.dialog}
     </Page>
   );
 }
