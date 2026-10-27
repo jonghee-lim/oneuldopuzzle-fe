@@ -77,6 +77,8 @@ const shots = process.argv[2];
   }
   await page.getByRole("heading", { name: "레벨 1 완성!" }).waitFor();
   await page.getByRole("img", { name: /^별 [1-3]개$/ }).waitFor();
+  // 처음 푼 판은 첫 기록으로 보여 준다
+  await page.getByRole("status").filter({ hasText: /^첫 기록 \d+:\d\d$/ }).waitFor();
   if (shots) await page.screenshot({ path: `${shots}/4-clear.png` });
   await page.getByRole("button", { name: "다음 레벨" }).tap();
   await page.getByText("레벨 2").first().waitFor();
@@ -89,6 +91,8 @@ const shots = process.argv[2];
   assert.ok(st.stars["sudoku:easy:1"] >= 1);
   assert.equal(st.score, undefined);
   assert.equal(st.stats.easy.cleared, 1);
+  assert.equal(st.stats.easy.recent.length, 1);
+  await page.getByRole("region", { name: "연속 출석" }).waitFor();
   // 레벨은 난이도마다 따로: 쉬움만 1레벨 깼고 어려움은 그대로 레벨 1
   assert.deepEqual(st.sudokuCleared, { easy: 1 });
   if (shots) await page.screenshot({ path: `${shots}/5b-records.png`, fullPage: true });

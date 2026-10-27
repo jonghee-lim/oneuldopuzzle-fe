@@ -4,6 +4,8 @@ import StarIcon from "../components/dessert/StarIcon";
 import Page from "../components/layout/Page";
 import PuzzleHeader from "../components/layout/PuzzleHeader";
 import { totalStarsOf } from "../puzzle/core/collection";
+import { addDays, dateKey, longestStreak, streakOf } from "../puzzle/core/daily";
+import { speedup } from "../puzzle/core/record";
 import { SUDOKU_PAR_SECONDS } from "../puzzle/core/score";
 import { DIFFICULTY_LABEL, type SudokuDifficulty } from "../puzzle/sudoku/generator";
 import { formatTime } from "../puzzle/sudoku/game";
@@ -11,7 +13,7 @@ import { usePuzzleStore, type PuzzleStat } from "../stores/puzzleStore";
 import { dessert } from "../theme/palette";
 import { radius } from "../theme/shape";
 
-/** 기록표: 모은 별과 퍼즐별 기록. 지금은 이 기기 기록만 보입니다(계정·순위는 이후 공용 API). */
+/** 기록표: 연속 출석, 퍼즐별 기록과 최근 판 추이, 모은 별. 지금은 이 기기 기록만 보입니다(계정·순위는 이후 공용 API). */
 export default function RecordsPage() {
   const stars = usePuzzleStore((s) => s.stars);
   const stats = usePuzzleStore((s) => s.stats);
@@ -20,6 +22,8 @@ export default function RecordsPage() {
   const blockCleared = usePuzzleStore((s) => s.blockCleared);
   const nonogramCleared = usePuzzleStore((s) => s.nonogramCleared);
   const escapeCleared = usePuzzleStore((s) => s.escapeCleared);
+  const dailyDays = usePuzzleStore((s) => s.dailyDays);
+  const today = dateKey();
   const total = totalStarsOf(stars);
   // 별 키 앞부분(퍼즐 이름)으로 퍼즐별 별 합계를 셉니다.
   const starsOf = (...kinds: string[]) => Object.entries(stars).reduce((n, [k, v]) => (kinds.includes(k.split(":")[0]) ? n + v : n), 0);
@@ -29,25 +33,18 @@ export default function RecordsPage() {
     <Page>
       <PuzzleHeader title="기록표" subtitle="이 기기 기록" />
       <Box sx={{ px: 2, pt: 1.5, pb: 3, display: "flex", flexDirection: "column", gap: 2 }}>
-        <Box component="section" aria-label="모은 별" sx={{ borderRadius: radius.card, bgcolor: dessert.vanilla, p: 2.5, display: "flex", alignItems: "center", gap: 2 }}>
-          <StarIcon size={56} />
-          <Box>
-            <Typography sx={{ fontSize: 14, color: dessert.cocoaSoft, fontWeight: 600 }}>모은 별</Typography>
-            <Typography sx={{ fontSize: 40, fontWeight: 800, lineHeight: 1.05, letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums" }}>
-              {total.toLocaleString("ko-KR")}
-              <Box component="span" sx={{ fontSize: 20, ml: 0.5 }}>개</Box>
-            </Typography>
-            <Typography sx={{ fontSize: 13, color: dessert.cocoaSoft }}>
-              스도쿠 {sudokuCleared}판 · 보너스 {zoneCleared + slideCleared + blockCleared}판 · 스페셜 {nonogramCleared + escapeCleared}판
-            </Typography>
-          </Box>
-        </Box>
+        <StreakCard days={dailyDays} today={today} />
+        <Typography sx={{ fontSize: 13, color: dessert.cocoaSoft, px: 0.5, mt: -1, display: "flex", alignItems: "center", gap: 0.5 }}>
+          <StarIcon size={15} />
+          별 {total.toLocaleString("ko-KR")}개 · 스도쿠 {sudokuCleared}판 · 보너스 {zoneCleared + slideCleared + blockCleared}판 · 스페셜 {nonogramCleared + escapeCleared}판
+        </Typography>
 
         <Section title="클래식 스도쿠" stars={starsOf("sudoku")}>
           <Table
             head={["난이도", "푼 판", "최고 기록", "평균"]}
             rows={(Object.keys(DIFFICULTY_LABEL) as SudokuDifficulty[]).map((d) => [DIFFICULTY_LABEL[d], ...statCells(stats[d])])}
           />
+          <Trends items={(Object.keys(DIFFICULTY_LABEL) as SudokuDifficulty[]).map((d) => [DIFFICULTY_LABEL[d], stats[d]] as const)} />
         </Section>
 
         <Section title="보너스 퍼즐" stars={starsOf("zones", "blocks", "sliding")}>
@@ -59,6 +56,7 @@ export default function RecordsPage() {
               ["슬라이딩", `${slideCleared}`, ...statCells(stats.sliding).slice(1)],
             ]}
           />
+          <Trends items={[["색깔 구역", stats.zones], ["블록 채우기", stats.blocks], ["슬라이딩", stats.sliding]] as const} />
         </Section>
 
         <Section title="스페셜 퍼즐" stars={starsOf("nonogram", "escape", "nonogram-old", "escape-old")}>
@@ -81,11 +79,77 @@ export default function RecordsPage() {
             <li>색깔 구역·블록 채우기: 기준 시간 안에, 힌트 없이</li>
             <li>슬라이딩·블록 탈출: 최소 수로, 힌트 없이 (4×4 슬라이딩은 3분 안에)</li>
             <li>노노그램: 잘못 칠하지 않고, 힌트 없이</li>
-            <li>같은 레벨을 다시 풀면 가장 많이 받은 별이 남아요. 별 6개마다 디저트가 하나 열리고 힌트도 1개 받아요.</li>
+            <li>같은 레벨을 다시 풀면 가장 많이 받은 별이 남아요.</li>
           </Box>
         </Section>
       </Box>
     </Page>
+  );
+}
+
+const WEEKS = 4;
+
+/** 연속 출석과 최근 4주 달력(오늘의 퍼즐 세 판을 다 푼 날) */
+function StreakCard({ days, today }: { days: readonly string[]; today: string }) {
+  const done = new Set(days);
+  const streak = streakOf(days, today);
+  const cells = Array.from({ length: WEEKS * 7 }, (_, k) => addDays(today, k - (WEEKS * 7 - 1)));
+  return (
+    <Box component="section" aria-label="연속 출석" sx={{ borderRadius: radius.card, bgcolor: dessert.paper, p: 2.5, boxShadow: "0 1px 2px rgba(78,59,46,.06), 0 8px 24px rgba(78,59,46,.06)" }}>
+      <Box sx={{ display: "flex", alignItems: "baseline", gap: 1 }}>
+        <Typography sx={{ fontSize: 36, fontWeight: 800, lineHeight: 1, letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums" }}>
+          {streak}
+          <Box component="span" sx={{ fontSize: 18, ml: 0.25 }}>일</Box>
+        </Typography>
+        <Typography sx={{ fontSize: 15, fontWeight: 700 }}>연속 출석</Typography>
+        <Typography sx={{ ml: "auto", fontSize: 13, color: dessert.cocoaSoft, fontVariantNumeric: "tabular-nums" }}>최장 {longestStreak(days)}일</Typography>
+      </Box>
+      <Typography sx={{ fontSize: 13, color: dessert.cocoaSoft, mt: 0.5 }}>오늘의 퍼즐 세 판을 다 푼 날을 셉니다.</Typography>
+      <Box role="img" aria-label={`최근 4주 중 ${cells.filter((d) => done.has(d)).length}일 출석`} sx={{ mt: 1.5, display: "grid", gridTemplateColumns: "repeat(7, minmax(0, 1fr))", gap: 0.5 }}>
+        {cells.map((d) => (
+          <Box
+            key={d}
+            sx={{
+              aspectRatio: "1 / 1",
+              borderRadius: "6px",
+              bgcolor: done.has(d) ? dessert.mintDeep : dessert.creamDeep,
+              outline: d === today ? `2px solid ${dessert.strawberryDeep}` : "none",
+              outlineOffset: "-2px",
+            }}
+          />
+        ))}
+      </Box>
+    </Box>
+  );
+}
+
+/** 최근 판 시간 막대(왼쪽이 오래된 판)와 빨라진 정도 */
+function Trends({ items }: { items: readonly (readonly [string, PuzzleStat | undefined])[] }) {
+  const shown = items.filter(([, st]) => (st?.recent?.length ?? 0) >= 2);
+  if (!shown.length) return null;
+  return (
+    <Box sx={{ borderTop: `1px solid ${dessert.creamDeep}`, px: 1.5, py: 1.25, display: "flex", flexDirection: "column", gap: 1 }}>
+      <Typography sx={{ fontSize: 13, fontWeight: 700, color: dessert.cocoaSoft }}>최근 판 시간</Typography>
+      {shown.map(([name, st]) => {
+        const recent = st!.recent!;
+        const max = Math.max(...recent);
+        const up = speedup(recent);
+        const clean = st!.clean ?? 0;
+        return (
+          <Box key={name} sx={{ display: "grid", gridTemplateColumns: "72px minmax(0, 1fr) auto", alignItems: "end", gap: 1 }}>
+            <Typography sx={{ fontSize: 13, fontWeight: 700 }}>{name}</Typography>
+            <Box role="img" aria-label={`${name} 최근 ${recent.length}판: ${recent.map(formatTime).join(", ")}`} sx={{ display: "flex", alignItems: "flex-end", gap: "3px", height: 28 }}>
+              {recent.map((t, k) => (
+                <Box key={k} sx={{ flex: 1, maxWidth: 14, height: `${Math.max(12, (t / max) * 100)}%`, borderRadius: "3px", bgcolor: k === recent.length - 1 ? dessert.strawberryDeep : dessert.line }} />
+              ))}
+            </Box>
+            <Typography sx={{ fontSize: 12, color: dessert.cocoaSoft, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
+              {up !== null && up >= 5 ? `${up}% 빨라짐` : `힌트 없이 ${clean}판`}
+            </Typography>
+          </Box>
+        );
+      })}
+    </Box>
   );
 }
 

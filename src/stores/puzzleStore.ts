@@ -3,6 +3,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { HINT_START, blockStars, dailyHintReward, escapeStars, nonogramStars, slideStars, starCount, sudokuStars, zoneStars, type StarLine } from "../puzzle/core/score";
 import { keepBest, starKey } from "../puzzle/core/collection";
+import { addRecord, type LastRecord, type PuzzleStat } from "../puzzle/core/record";
 import { dailyBlocks, dailyKinds, dailySlide, dailySudoku, dailyZones, dateKey, type DailyKind } from "../puzzle/core/daily";
 import { blocksForLevel } from "../puzzle/blocks/generator";
 import { newBlockGame, type BlockGame } from "../puzzle/blocks/game";
@@ -30,11 +31,7 @@ export interface PuzzleSettings {
 }
 
 /** 점수표 한 줄: 퍼즐 종류별로 푼 수·가장 빠른 시간·합계 시간 */
-export interface PuzzleStat {
-  cleared: number;
-  bestSeconds?: number;
-  totalSeconds: number;
-}
+export type { PuzzleStat } from "../puzzle/core/record";
 
 export type StatKey = SudokuDifficulty | "zones" | "sliding" | "blocks";
 
@@ -55,6 +52,8 @@ interface PuzzleState {
   /** 방금 푼 판에서 얻은 점수(완성 창에 보여 주고 저장하지 않음) */
   /** 방금 깬 레벨에서 받은 별(완성 창에 보여 줌) */
   lastStars: StarLine[] | null;
+  /** 방금 깬 판의 시간과 그 전 최고 기록(완성 창에 보여 줌, 시간을 재지 않는 퍼즐은 null) */
+  lastRecord: LastRecord | null;
   /** 레벨별 가장 많이 받은 별(키는 collection.starKey) */
   stars: Record<string, number>;
   /** 색깔 구역 퍼즐 */
@@ -120,20 +119,14 @@ interface PuzzleState {
 const DAILY_RESET = { dailySudoku: null, dailyZone: null, dailyBlocks: null, dailySlide: null, dailyDone: [] as DailyKind[] };
 
 /** 한 판의 별을 기록합니다(같은 레벨은 가장 많이 받은 별을 남김). */
-function gainStars(state: PuzzleState, key: string, lines: StarLine[]): Pick<PuzzleState, "stars" | "lastStars"> {
-  return { stars: keepBest(state.stars, key, starCount(lines)), lastStars: lines };
+function gainStars(state: PuzzleState, key: string, lines: StarLine[]): Pick<PuzzleState, "stars" | "lastStars" | "lastRecord"> {
+  return { stars: keepBest(state.stars, key, starCount(lines)), lastStars: lines, lastRecord: null };
 }
 
-function addStat(stats: PuzzleState["stats"], key: StatKey, seconds: number): PuzzleState["stats"] {
-  const prev = stats[key] ?? { cleared: 0, totalSeconds: 0 };
-  return {
-    ...stats,
-    [key]: {
-      cleared: prev.cleared + 1,
-      totalSeconds: prev.totalSeconds + seconds,
-      bestSeconds: prev.bestSeconds === undefined ? seconds : Math.min(prev.bestSeconds, seconds),
-    },
-  };
+/** 퍼즐 기록을 더하고, 완성 창에 보여 줄 방금 판 결과를 남깁니다. */
+function record(state: PuzzleState, key: StatKey, seconds: number, helped: boolean): Pick<PuzzleState, "stats" | "lastRecord"> {
+  const prev = state.stats[key];
+  return { stats: { ...state.stats, [key]: addRecord(prev, seconds, helped) }, lastRecord: { seconds, prevBest: prev?.bestSeconds } };
 }
 
 /** 난이도를 고른 적이 없으면 쉬움부터 */
@@ -183,6 +176,7 @@ export const usePuzzleStore = create<PuzzleState>()(
       chosenDifficulty: null,
       stats: {},
       lastStars: null,
+      lastRecord: null,
       stars: {},
       zoneCleared: 0,
       zoneGame: null,
@@ -234,7 +228,7 @@ export const usePuzzleStore = create<PuzzleState>()(
             game,
             sudokuCleared: { ...get().sudokuCleared, [game.difficulty]: Math.max(get().sudokuCleared[game.difficulty] ?? 0, game.level) },
             bestSeconds: { ...get().bestSeconds, [key]: best ? Math.min(best, game.elapsedSeconds) : game.elapsedSeconds },
-            stats: addStat(get().stats, game.difficulty, game.elapsedSeconds),
+            ...record(get(), game.difficulty, game.elapsedSeconds, !!game.usedCheck || !!game.usedHint),
           });
           return;
         }
@@ -261,7 +255,7 @@ export const usePuzzleStore = create<PuzzleState>()(
             zoneGame,
             zoneCleared: Math.max(get().zoneCleared, zoneGame.level),
             ...gainStars(get(), starKey.zones(zoneGame.level), lines),
-            stats: addStat(get().stats, "zones", zoneGame.elapsedSeconds),
+            ...record(get(), "zones", zoneGame.elapsedSeconds, !!zoneGame.usedHint),
           });
           return;
         }
@@ -286,7 +280,7 @@ export const usePuzzleStore = create<PuzzleState>()(
             slideGame,
             slideCleared: Math.max(get().slideCleared, slideGame.level),
             ...gainStars(get(), starKey.sliding(slideGame.level), lines),
-            stats: addStat(get().stats, "sliding", slideGame.elapsedSeconds),
+            ...record(get(), "sliding", slideGame.elapsedSeconds, !!slideGame.usedHint),
           });
           return;
         }
@@ -311,7 +305,7 @@ export const usePuzzleStore = create<PuzzleState>()(
             blockGame,
             blockCleared: Math.max(get().blockCleared, blockGame.level),
             ...gainStars(get(), starKey.blocks(blockGame.level), lines),
-            stats: addStat(get().stats, "blocks", blockGame.elapsedSeconds),
+            ...record(get(), "blocks", blockGame.elapsedSeconds, !!blockGame.usedHint),
           });
           return;
         }
