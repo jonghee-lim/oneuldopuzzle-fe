@@ -9,6 +9,7 @@ import { useEffect, useMemo, useState } from "react";
 import DessertArt from "../components/dessert/DessertArt";
 import Page from "../components/layout/Page";
 import PuzzleHeader from "../components/layout/PuzzleHeader";
+import { useGuide } from "../components/guide/useGuide";
 import ClearDialog from "../components/puzzle/ClearDialog";
 import ConfirmRestart from "../components/puzzle/ConfirmRestart";
 import PuzzleBoard from "../components/puzzle/PuzzleBoard";
@@ -32,6 +33,7 @@ export default function ZonesPage() {
   const startDailyZone = usePuzzleStore((s) => s.startDailyZone);
   const read = () => (daily ? usePuzzleStore.getState().dailyZone : usePuzzleStore.getState().zoneGame);
   const hint = useHint(game?.cells.join(""), game?.puzzle.size);
+  const guide = useGuide("zones");
   const dailyClear = useDailyClear(game?.elapsedSeconds ?? 0);
   const lastStars = usePuzzleStore((s) => s.lastStars);
   const [confirm, setConfirm] = useState(false);
@@ -70,7 +72,7 @@ export default function ZonesPage() {
 
   return (
     <Page>
-      <PuzzleHeader
+      <PuzzleHeader help={guide.button}
         title={daily ? "오늘의 퍼즐" : `레벨 ${game.level}`}
         subtitle={`색깔 구역 · ${daily ? "" : `${TIER_LABEL[game.tier ?? "easy"]} · `}${size}×${size}`}
         back={daily ? undefined : { to: TIER_ROUTE.zones, label: "색깔 구역 화면으로" }}
@@ -171,6 +173,7 @@ export default function ZonesPage() {
         stars={daily ? null : lastStars}
       />
       {hint.toast}
+      {guide.dialog}
     </Page>
   );
 }

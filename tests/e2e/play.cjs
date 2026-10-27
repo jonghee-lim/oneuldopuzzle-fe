@@ -12,6 +12,10 @@ const shots = process.argv[2];
   const page = await browser.newPage({ ...devices["iPhone 13"] });
   const errors = [];
   page.on("pageerror", (e) => errors.push(String(e)));
+  // 하는 법(처음 열 때 저절로 뜸)은 따로 확인하고, 여기서는 이미 본 것으로 둡니다.
+  await page.addInitScript(() => {
+    if (!localStorage.getItem("oneuldopuzzle-guide-seen")) localStorage.setItem("oneuldopuzzle-guide-seen", JSON.stringify(["sudoku", "zones", "nonogram", "escape", "sliding", "blocks"]));
+  });
 
   // 첫 화면은 여섯 퍼즐 카드, 스도쿠 카드를 누르면 스도쿠 화면(난이도 고르기)
   await page.goto(BASE);

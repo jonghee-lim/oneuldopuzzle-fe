@@ -8,6 +8,7 @@ import { useEffect, useMemo, useState } from "react";
 import DessertArt from "../components/dessert/DessertArt";
 import Page from "../components/layout/Page";
 import PuzzleHeader from "../components/layout/PuzzleHeader";
+import { useGuide } from "../components/guide/useGuide";
 import ClearDialog from "../components/puzzle/ClearDialog";
 import ConfirmRestart from "../components/puzzle/ConfirmRestart";
 import PuzzleBoard from "../components/puzzle/PuzzleBoard";
@@ -32,6 +33,7 @@ export default function BlocksPage() {
   const updateBlocks = usePuzzleStore((s) => (daily ? s.updateDailyBlocks : s.updateBlocks));
   const startDailyBlocks = usePuzzleStore((s) => s.startDailyBlocks);
   const hint = useHint(game?.placed.join(","), game?.puzzle.size);
+  const guide = useGuide("blocks");
   const dailyClear = useDailyClear(game?.elapsedSeconds ?? 0);
   const lastStars = usePuzzleStore((s) => s.lastStars);
   const [confirm, setConfirm] = useState(false);
@@ -62,7 +64,7 @@ export default function BlocksPage() {
 
   return (
     <Page>
-      <PuzzleHeader
+      <PuzzleHeader help={guide.button}
         title={daily ? "오늘의 퍼즐" : `레벨 ${game.level}`}
         subtitle={`블록 채우기 · ${daily ? "" : `${TIER_LABEL[game.tier ?? "easy"]} · `}${size}×${size}`}
         back={daily ? undefined : { to: TIER_ROUTE.blocks, label: "블록 채우기 화면으로" }}
@@ -185,6 +187,7 @@ export default function BlocksPage() {
         stars={daily ? null : lastStars}
       />
       {hint.toast}
+      {guide.dialog}
     </Page>
   );
 }

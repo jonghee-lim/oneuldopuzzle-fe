@@ -8,6 +8,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import DessertArt from "../components/dessert/DessertArt";
 import Page from "../components/layout/Page";
 import PuzzleHeader from "../components/layout/PuzzleHeader";
+import { useGuide } from "../components/guide/useGuide";
 import ClearDialog from "../components/puzzle/ClearDialog";
 import ConfirmRestart from "../components/puzzle/ConfirmRestart";
 import PuzzleBoard from "../components/puzzle/PuzzleBoard";
@@ -45,6 +46,7 @@ function EscapeLevel({ game }: { game: EscapeGame }) {
   const startEscape = usePuzzleStore((s) => s.startEscape);
   const [confirm, setConfirm] = useState(false);
   const hint = useHint(JSON.stringify(game.blocks), ESCAPE_SIZE);
+  const guide = useGuide("escape");
   const targets = useMemo(() => targetCells(game), [game]);
   const cellPct = 100 / ESCAPE_SIZE;
   const escapeBest = usePuzzleStore((s) => s.escapeBest);
@@ -113,7 +115,7 @@ function EscapeLevel({ game }: { game: EscapeGame }) {
 
   return (
     <Page>
-      <PuzzleHeader title={`레벨 ${game.level}`} subtitle={`블록 탈출 · ${TIER_LABEL[tier]} · 최소 ${game.minMoves}수`} back={{ to: TIER_ROUTE.escape, label: "블록 탈출 화면으로" }} right={<span aria-label="이동 수">{game.moves}수</span>} />
+      <PuzzleHeader help={guide.button} title={`레벨 ${game.level}`} subtitle={`블록 탈출 · ${TIER_LABEL[tier]} · 최소 ${game.minMoves}수`} back={{ to: TIER_ROUTE.escape, label: "블록 탈출 화면으로" }} right={<span aria-label="이동 수">{game.moves}수</span>} />
       <Box sx={{ px: 1.5, pt: 2 }}>
         <PuzzleBoard
           focus={hint.focus}
@@ -169,6 +171,7 @@ function EscapeLevel({ game }: { game: EscapeGame }) {
         onNext={() => startEscape()}
       />
       {hint.toast}
+      {guide.dialog}
     </Page>
   );
 }

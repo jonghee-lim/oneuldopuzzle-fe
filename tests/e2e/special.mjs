@@ -18,6 +18,10 @@ const browser = await chromium.launch(process.env.CHROME_PATH ? { executablePath
 const page = await browser.newPage({ ...devices["iPhone 13"] });
 const errors = [];
 page.on("pageerror", (e) => errors.push(String(e)));
+// 하는 법(처음 열 때 저절로 뜸)은 따로 확인하고, 여기서는 이미 본 것으로 둡니다.
+await page.addInitScript(() => {
+  if (!localStorage.getItem("oneuldopuzzle-guide-seen")) localStorage.setItem("oneuldopuzzle-guide-seen", JSON.stringify(["sudoku", "zones", "nonogram", "escape", "sliding", "blocks"]));
+});
 // 첫 화면 카드 → 난이도 고르는 화면(2026-10-27) → 시작하기
 async function openFromHome(name) {
   await page.getByRole("navigation", { name: "퍼즐 고르기" }).getByRole("link", { name }).tap();
@@ -215,6 +219,28 @@ assert.deepEqual(migrated.state.stars, { "sudoku:easy:1": 1, "sudoku:easy:2": 1,
 assert.deepEqual(migrated.state.tierCleared, { zones: { easy: 1 }, sliding: {}, blocks: {}, nonogram: { easy: 1 }, escape: {} });
 assert.equal(migrated.state.zoneCleared, undefined);
 assert.equal(migrated.state.score, undefined);
+
+// 하는 법: 처음 여는 퍼즐에서 저절로 뜨고, 다 보면 다시 뜨지 않으며, '?'로 다시 볼 수 있다(2026-10-27 노노그램 신고)
+const fresh = await browser.newPage({ ...devices["iPhone 13"] });
+fresh.on("pageerror", (e) => errors.push(String(e)));
+await fresh.goto(`${BASE}/special/nonogram`);
+await fresh.getByRole("heading", { name: "노노그램 하는 법" }).waitFor();
+assert.ok(await fresh.getByText("'1 1'처럼").count() === 0, "첫 단계는 한 덩어리 설명");
+await fresh.getByRole("button", { name: "다음" }).tap();
+await fresh.getByText(/'1 1'처럼 숫자가 여러 개면/).waitFor();
+for (let n = 0; n < 5 && (await fresh.getByRole("button", { name: "다음" }).count()); n += 1) await fresh.getByRole("button", { name: "다음" }).tap();
+await fresh.getByRole("button", { name: "시작하기" }).tap();
+await fresh.getByRole("heading", { name: "노노그램 하는 법" }).waitFor({ state: "detached" });
+await fresh.reload();
+await fresh.getByRole("heading", { name: /^레벨/ }).waitFor();
+assert.equal(await fresh.getByRole("heading", { name: "노노그램 하는 법" }).count(), 0, "본 하는 법은 다시 뜨지 않음");
+await fresh.getByRole("button", { name: "하는 법" }).tap();
+await fresh.getByRole("heading", { name: "노노그램 하는 법" }).waitFor();
+await fresh.getByRole("button", { name: "하는 법 닫기" }).tap();
+// 다른 퍼즐은 처음이라 저절로 뜬다
+await fresh.goto(`${BASE}/zones`);
+await fresh.getByRole("heading", { name: "색깔 구역 하는 법" }).waitFor();
+await fresh.close();
 
 assert.deepEqual(errors, []);
 await browser.close();
