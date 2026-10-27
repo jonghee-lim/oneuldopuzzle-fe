@@ -3,12 +3,12 @@ import { Box, IconButton, Typography } from "@mui/material";
 import type { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 
-/** 풀이 화면 위 줄: 처음 화면으로, 가운데 제목(h1)과 한 줄 설명, 오른쪽 상태(시간·이동 수) */
-export default function PuzzleHeader({ title, subtitle, art, right }: { title: string; subtitle?: string; art?: ReactNode; right?: ReactNode }) {
+/** 풀이 화면 위 줄: 뒤로(기본은 처음 화면), 가운데 제목(h1)과 한 줄 설명, 오른쪽 상태(시간·이동 수) */
+export default function PuzzleHeader({ title, subtitle, art, right, back }: { title: string; subtitle?: string; art?: ReactNode; right?: ReactNode; back?: { to: string; label: string } }) {
   const navigate = useNavigate();
   return (
     <Box component="header" sx={{ display: "flex", alignItems: "center", px: 1, pt: "calc(env(safe-area-inset-top) + 8px)", pb: 0.5 }}>
-      <IconButton aria-label="처음 화면으로" onClick={() => navigate("/")}>
+      <IconButton aria-label={back?.label ?? "처음 화면으로"} onClick={() => navigate(back?.to ?? "/")}>
         <ArrowBackIosNewIcon fontSize="small" />
       </IconButton>
       <Box sx={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 1, minWidth: 0 }}>

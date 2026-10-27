@@ -1,4 +1,7 @@
 import RestartAltIcon from "@mui/icons-material/RestartAlt";
+import { needsStart, useTierNext } from "../components/tier/useTier";
+import { TIER_ROUTE } from "../components/tier/tierRoutes";
+import { TIER_LABEL } from "../puzzle/core/tier";
 import UndoIcon from "@mui/icons-material/Undo";
 import { Box, ButtonBase, Typography } from "@mui/material";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -17,7 +20,7 @@ import { useSwipe, type Swipe } from "../components/puzzle/useSwipe";
 import type { ReactNode } from "react";
 import type { EscapeGame } from "../puzzle/escape/game";
 import { ESCAPE_SIZE, EXIT_ROW, TARGET_ID } from "../puzzle/escape/rules";
-import { usePuzzleStore } from "../stores/puzzleStore";
+import { escapeBestKey, usePuzzleStore } from "../stores/puzzleStore";
 import { dessert } from "../theme/palette";
 import { radius } from "../theme/shape";
 
@@ -27,12 +30,12 @@ const BLOCK_COLORS = ["#BFE8D9", "#F4D9A8", "#F8C8D4", "#D8CFF0", "#C9E4F2", "#F
 /** 블록 탈출(끝없는 레벨, 2026-10-27): 레벨마다 최소 이동 수가 조금씩 늘어납니다. */
 export default function EscapePage() {
   const game = usePuzzleStore((s) => s.escapeGame);
-  const escapeCleared = usePuzzleStore((s) => s.escapeCleared);
+  const next = useTierNext("escape");
   const startEscape = usePuzzleStore((s) => s.startEscape);
   useEffect(() => {
     const current = usePuzzleStore.getState().escapeGame;
-    if (!current || (!current.escaped && current.level !== escapeCleared + 1)) startEscape();
-  }, [escapeCleared, startEscape]);
+    if (needsStart(current, !!current?.escaped, next)) startEscape();
+  }, [next, startEscape]);
   if (!game) return null;
   return <EscapeLevel game={game} />;
 }
@@ -46,7 +49,8 @@ function EscapeLevel({ game }: { game: EscapeGame }) {
   const cellPct = 100 / ESCAPE_SIZE;
   const escapeBest = usePuzzleStore((s) => s.escapeBest);
   const lastStars = usePuzzleStore((s) => s.lastStars);
-  const best = escapeBest[game.level];
+  const tier = game.tier ?? "easy";
+  const best = escapeBest[escapeBestKey(game.level, tier)];
   // 이미 풀린 판을 다시 열 때는 소리를 내지 않습니다.
   const wasEscaped = useRef(game.escaped);
   useEffect(() => {
@@ -109,7 +113,7 @@ function EscapeLevel({ game }: { game: EscapeGame }) {
 
   return (
     <Page>
-      <PuzzleHeader title={`레벨 ${game.level}`} subtitle={`블록 탈출 · 최소 ${game.minMoves}수`} right={<span aria-label="이동 수">{game.moves}수</span>} />
+      <PuzzleHeader title={`레벨 ${game.level}`} subtitle={`블록 탈출 · ${TIER_LABEL[tier]} · 최소 ${game.minMoves}수`} back={{ to: TIER_ROUTE.escape, label: "블록 탈출 화면으로" }} right={<span aria-label="이동 수">{game.moves}수</span>} />
       <Box sx={{ px: 1.5, pt: 2 }}>
         <PuzzleBoard
           focus={hint.focus}

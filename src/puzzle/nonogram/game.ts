@@ -1,4 +1,5 @@
 // 노노그램 한 판의 조작. 칸을 누르면 지금 도구(칠하기·X 표시)대로 바뀝니다. 끌어서 여러 칸 칠하기는 쓰지 않습니다.
+import type { Tier } from "../core/tier.ts";
 import type { HintStep } from "../core/hint.ts";
 import { popHistory, pushHistory, type History } from "../core/history.ts";
 import { cluesOf, lineClue, pictureGrid, sameClue, type NonogramClues, type NonogramPicture } from "./rules.ts";
@@ -9,6 +10,8 @@ export type NonogramTool = "fill" | "cross";
 export interface NonogramGame {
   /** 레벨 번호(끝없는 레벨, 2026-10-27). 0이면 레벨 밖 판(시험용) */
   level: number;
+  /** 난이도(없으면 쉬움, 오늘의 퍼즐은 없음) */
+  tier?: Tier;
   /** 그림 이름(손으로 그린 그림이면 완성 창에 보여 줌) */
   name: string;
   width: number;

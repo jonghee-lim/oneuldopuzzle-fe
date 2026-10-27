@@ -1,4 +1,7 @@
 import RestartAltIcon from "@mui/icons-material/RestartAlt";
+import { needsStart, useTierNext } from "../components/tier/useTier";
+import { TIER_ROUTE } from "../components/tier/tierRoutes";
+import { TIER_LABEL } from "../puzzle/core/tier";
 import UndoIcon from "@mui/icons-material/Undo";
 import { Box, ButtonBase, Typography } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
@@ -24,7 +27,7 @@ import { radius } from "../theme/shape";
 export default function BlocksPage() {
   const daily = useIsDaily();
   const game = usePuzzleStore((s) => (daily ? s.dailyBlocks : s.blockGame));
-  const cleared = usePuzzleStore((s) => s.blockCleared);
+  const next = useTierNext("blocks");
   const startBlocks = usePuzzleStore((s) => s.startBlocks);
   const updateBlocks = usePuzzleStore((s) => (daily ? s.updateDailyBlocks : s.updateBlocks));
   const startDailyBlocks = usePuzzleStore((s) => s.startDailyBlocks);
@@ -40,8 +43,8 @@ export default function BlocksPage() {
       return;
     }
     const current = usePuzzleStore.getState().blockGame;
-    if (!current || (!current.solved && current.level !== cleared + 1)) startBlocks();
-  }, [daily, cleared, startBlocks, startDailyBlocks]);
+    if (needsStart(current, !!current?.solved, next)) startBlocks();
+  }, [daily, next, startBlocks, startDailyBlocks]);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -61,7 +64,8 @@ export default function BlocksPage() {
     <Page>
       <PuzzleHeader
         title={daily ? "오늘의 퍼즐" : `레벨 ${game.level}`}
-        subtitle={`블록 채우기 · ${size}×${size}`}
+        subtitle={`블록 채우기 · ${daily ? "" : `${TIER_LABEL[game.tier ?? "easy"]} · `}${size}×${size}`}
+        back={daily ? undefined : { to: TIER_ROUTE.blocks, label: "블록 채우기 화면으로" }}
         art={<DessertArt id="pudding" size={30} />}
         right={<span aria-label="걸린 시간">{formatTime(game.elapsedSeconds)}</span>}
       />

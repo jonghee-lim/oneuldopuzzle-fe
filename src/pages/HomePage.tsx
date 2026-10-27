@@ -1,4 +1,8 @@
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
+import { TIER_INFO, tierResume } from "../components/tier/tierInfo";
+import { TIER_ROUTE } from "../components/tier/tierRoutes";
+import { useTierNext } from "../components/tier/useTier";
+import { TIER_LABEL, type TierPuzzle } from "../puzzle/core/tier";
 import { Box, ButtonBase, IconButton, Typography } from "@mui/material";
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
@@ -8,13 +12,8 @@ import PuzzleThumb from "../components/home/PuzzleThumb";
 import AppHeader from "../components/layout/AppHeader";
 import Page from "../components/layout/Page";
 import { totalStarsOf } from "../puzzle/core/collection";
-import { escapeForLevel } from "../puzzle/escape/levels";
-import { nonogramSizeForLevel } from "../puzzle/nonogram/generator";
 import { DIFFICULTY_LABEL } from "../puzzle/sudoku/generator";
 import { hasProgress } from "../puzzle/sudoku/game";
-import { blockSizeForLevel } from "../puzzle/blocks/generator";
-import { slideSizeForLevel } from "../puzzle/sliding/generator";
-import { zoneSizeForLevel } from "../puzzle/zones/generator";
 import { sudokuNext, usePuzzleStore } from "../stores/puzzleStore";
 import { dessert } from "../theme/palette";
 import { radius } from "../theme/shape";
@@ -25,30 +24,8 @@ export default function HomePage() {
   const chosenDifficulty = usePuzzleStore((s) => s.chosenDifficulty);
   const game = usePuzzleStore((s) => s.game);
   const paused = usePuzzleStore((s) => s.paused);
-  const zoneCleared = usePuzzleStore((s) => s.zoneCleared);
-  const zoneGame = usePuzzleStore((s) => s.zoneGame);
-  const nonogramCleared = usePuzzleStore((s) => s.nonogramCleared);
-  const nonogramGame = usePuzzleStore((s) => s.nonogramGame);
-  const escapeCleared = usePuzzleStore((s) => s.escapeCleared);
-  const escapeGame = usePuzzleStore((s) => s.escapeGame);
-  const slideCleared = usePuzzleStore((s) => s.slideCleared);
-  const slideGame = usePuzzleStore((s) => s.slideGame);
-  const blockCleared = usePuzzleStore((s) => s.blockCleared);
-  const blockGame = usePuzzleStore((s) => s.blockGame);
-
   const { difficulty, level } = sudokuNext({ sudokuCleared, chosenDifficulty });
   const sudokuResume = [game, paused[difficulty]].some((g) => g && g.level === level && g.difficulty === difficulty && !g.completed && hasProgress(g));
-  const zoneLevel = zoneCleared + 1;
-  const zoneResume = !!zoneGame && zoneGame.level === zoneLevel && !zoneGame.solved && zoneGame.cells.some(Boolean);
-  const slideLevel = slideCleared + 1;
-  const slideResume = !!slideGame && slideGame.level === slideLevel && !slideGame.solved && slideGame.moves > 0;
-  const blockLevel = blockCleared + 1;
-  const blockResume = !!blockGame && blockGame.level === blockLevel && !blockGame.solved && blockGame.placed.some((a) => a !== null);
-  const nonogramLevel = nonogramCleared + 1;
-  const nonogramResume = !!nonogramGame && nonogramGame.level === nonogramLevel && !nonogramGame.solved && nonogramGame.cells.some(Boolean);
-  const escapeLevel = escapeCleared + 1;
-  const escapeResume = !!escapeGame && escapeGame.level === escapeLevel && !escapeGame.escaped && escapeGame.moves > 0;
-  const size = (n: number) => `${n}×${n}`;
   const totalStars = totalStarsOf(stars);
 
   return (
@@ -91,54 +68,32 @@ export default function HomePage() {
             badge={sudokuResume ? "이어 하기" : `${DIFFICULTY_LABEL[difficulty]} · 레벨 ${level}`}
             resume={sudokuResume}
           />
-          <Tile
-            to="/zones"
-            tint={dessert.mintMilk}
-            thumb={<PuzzleThumb kind="zones" />}
-            title="색깔 구역"
-            detail="줄·구역마다 마카롱 하나"
-            badge={zoneResume ? "이어 하기" : `레벨 ${zoneLevel} · ${size(zoneSizeForLevel(zoneLevel))}`}
-            resume={zoneResume}
-          />
-          <Tile
-            to="/blocks"
-            tint={dessert.vanilla}
-            thumb={<PuzzleThumb kind="blocks" />}
-            title="블록 채우기"
-            detail="빈틈없이 꽉 채우기"
-            badge={blockResume ? "이어 하기" : `레벨 ${blockLevel} · ${size(blockSizeForLevel(blockLevel))}`}
-            resume={blockResume}
-          />
-          <Tile
-            to="/sliding"
-            tint={dessert.strawberryMilk}
-            thumb={<PuzzleThumb kind="sliding" />}
-            title="슬라이딩"
-            detail="밀어서 순서대로"
-            badge={slideResume ? "이어 하기" : `레벨 ${slideLevel} · ${size(slideSizeForLevel(slideLevel))}`}
-            resume={slideResume}
-          />
-          <Tile
-            to="/special/nonogram"
-            tint={dessert.vanilla}
-            thumb={<PuzzleThumb kind="nonogram" />}
-            title="노노그램"
-            detail="숫자로 그림 완성"
-            badge={nonogramResume ? "이어 하기" : `레벨 ${nonogramLevel} · ${size(nonogramSizeForLevel(nonogramLevel))}`}
-            resume={nonogramResume}
-          />
-          <Tile
-            to="/special/escape"
-            tint={dessert.mintMilk}
-            thumb={<PuzzleThumb kind="escape" />}
-            title="블록 탈출"
-            detail="딸기 블록을 출구로"
-            badge={escapeResume ? "이어 하기" : `레벨 ${escapeLevel} · 최소 ${escapeForLevel(escapeLevel).minMoves}수`}
-            resume={escapeResume}
-          />
+          {HOME_TIER_ORDER.map((puzzle) => (
+            <TierTile key={puzzle} puzzle={puzzle} />
+          ))}
         </Box>
       </Box>
     </Page>
+  );
+}
+
+const HOME_TIER_ORDER: readonly TierPuzzle[] = ["zones", "blocks", "sliding", "nonogram", "escape"];
+
+/** 다섯 퍼즐 카드: 고른 난이도와 다음 레벨, 풀던 판이 있으면 이어 하기 */
+function TierTile({ puzzle }: { puzzle: TierPuzzle }) {
+  const info = TIER_INFO[puzzle];
+  const { tier, level } = useTierNext(puzzle);
+  const resume = usePuzzleStore((s) => tierResume(s, puzzle));
+  return (
+    <Tile
+      to={TIER_ROUTE[puzzle]}
+      tint={info.tint}
+      thumb={<PuzzleThumb kind={puzzle} />}
+      title={info.title}
+      detail={info.short}
+      badge={resume ? "이어 하기" : `${TIER_LABEL[tier]} · 레벨 ${level}`}
+      resume={resume}
+    />
   );
 }
 

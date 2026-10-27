@@ -1,4 +1,5 @@
 // 색깔 구역 퍼즐 한 판의 조작. 칸을 누르면 지금 도구(디저트 놓기·X 표시)대로 바뀝니다.
+import type { Tier } from "../core/tier.ts";
 import type { HintStep } from "../core/hint.ts";
 import { popHistory, pushHistory, type History } from "../core/history.ts";
 import { isZoneSolved, zoneConflicts, type ZonePuzzle } from "./rules.ts";
@@ -8,6 +9,8 @@ export type ZoneTool = "place" | "cross";
 /** 칸 상태: 0 비움, 1 X, 2 디저트 */
 export interface ZoneGame {
   level: number;
+  /** 난이도(없으면 쉬움, 오늘의 퍼즐은 없음) */
+  tier?: Tier;
   puzzle: ZonePuzzle;
   cells: number[];
   tool: ZoneTool;

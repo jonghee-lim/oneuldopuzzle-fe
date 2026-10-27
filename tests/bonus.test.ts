@@ -18,13 +18,21 @@ test("슬라이딩: 한 번 누르면 같은 줄 조각이 한꺼번에 밀린�
   assert.equal(minSlides([1, 2, 3, 4, 5, 6, 0, 7, 8], 3), 1);
 });
 
-test("슬라이딩: 레벨 1~40은 풀 수 있고 3×3은 최소 수가 레벨마다 늘어난다", () => {
-  for (let level = 1; level <= 40; level += 1) {
-    const p = slideForLevel(level);
-    assert.ok(isSolvable(p.board, p.size), `레벨 ${level}`);
-    assert.ok(!isSolved(p.board));
-    if (p.size === 3) assert.equal(p.minMoves, slideTargetMoves(level));
+test("슬라이딩: 난이도마다 레벨 1~40은 풀 수 있고 3×3은 최소 수가 레벨마다 늘어난다", () => {
+  for (const tier of ["easy", "normal", "hard"] as const) {
+    const boards = new Set<string>();
+    for (let level = 1; level <= 40; level += 1) {
+      const p = slideForLevel(level, tier);
+      assert.equal(p.size, tier === "hard" ? 4 : 3);
+      assert.ok(isSolvable(p.board, p.size), `${tier} 레벨 ${level}`);
+      assert.ok(!isSolved(p.board));
+      if (p.size === 3) assert.equal(p.minMoves, slideTargetMoves(level, tier));
+      boards.add(p.board.join(","));
+    }
+    assert.ok(boards.size >= 38, `${tier} 판이 거의 겹치지 않음`);
   }
+  // 보통은 쉬움보다 긴 판
+  assert.ok(slideTargetMoves(1, "normal") >= slideTargetMoves(40, "easy"));
 });
 
 test("슬라이딩 판 조작: 밀기·되돌리기·완성", () => {
@@ -43,10 +51,11 @@ test("블록 채우기: 모양은 기준 칸(맨 윗줄 왼쪽) 기준", () => {
   assert.equal(cellsAt(s, 4, 0), null);
 });
 
-test("블록 채우기: 레벨 1~60은 채우는 방법이 하나뿐이다", () => {
-  for (let level = 1; level <= 60; level += 1) {
-    const p = blocksForLevel(level);
-    assert.equal(p.size, blockSizeForLevel(level));
+test("블록 채우기: 난이도마다 레벨 1~40은 채우는 방법이 하나뿐이다", () => {
+  for (const tier of ["easy", "normal", "hard"] as const) for (let level = 1; level <= 40; level += 1) {
+    const p = blocksForLevel(level, tier);
+    assert.equal(p.size, blockSizeForLevel(level, tier));
+    assert.equal(p.size, { easy: 4, normal: 5, hard: 6 }[tier]);
     assert.equal(p.shapes.reduce((n, s) => n + s.length, 0), p.size * p.size);
     assert.equal(countTilings(p.size, p.shapes, 2), 1, `레벨 ${level}`);
   }

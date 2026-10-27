@@ -1,4 +1,5 @@
 // 블록 탈출 한 판의 조작. '블록 누르기 → 갈 칸 누르기' 또는 블록을 쓸어서(스와이프) 옮깁니다.
+import type { Tier } from "../core/tier.ts";
 import { popHistory, pushHistory, type History } from "../core/history.ts";
 import type { HintStep } from "../core/hint.ts";
 import { ESCAPE_SIZE, TARGET_ID, formatBoard, isEscaped, moveBlock, parseBoard, reachablePositions, type Block } from "./rules.ts";
@@ -7,6 +8,8 @@ import { solveEscape } from "./solver.ts";
 export interface EscapeGame {
   /** 레벨 번호(끝없는 레벨, 2026-10-27). 0이면 레벨 밖 판(시험용) */
   level: number;
+  /** 난이도(없으면 쉬움, 오늘의 퍼즐은 없음) */
+  tier?: Tier;
   /** 검사기가 구한 가장 적은 이동 수(별 조건) */
   minMoves: number;
   blocks: Block[];

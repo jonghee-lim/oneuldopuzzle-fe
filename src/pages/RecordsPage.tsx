@@ -9,7 +9,9 @@ import { speedup } from "../puzzle/core/record";
 import { SUDOKU_PAR_SECONDS } from "../puzzle/core/score";
 import { DIFFICULTY_LABEL, type SudokuDifficulty } from "../puzzle/sudoku/generator";
 import { formatTime } from "../puzzle/sudoku/game";
-import { usePuzzleStore, type PuzzleStat } from "../stores/puzzleStore";
+import { tierStatKey, usePuzzleStore, type PuzzleStat } from "../stores/puzzleStore";
+import { TIER_INFO } from "../components/tier/tierInfo";
+import { TIERS, TIER_LABEL, type Tier, type TierPuzzle } from "../puzzle/core/tier";
 import { dessert } from "../theme/palette";
 import { radius } from "../theme/shape";
 
@@ -17,17 +19,26 @@ import { radius } from "../theme/shape";
 export default function RecordsPage() {
   const stars = usePuzzleStore((s) => s.stars);
   const stats = usePuzzleStore((s) => s.stats);
-  const zoneCleared = usePuzzleStore((s) => s.zoneCleared);
-  const slideCleared = usePuzzleStore((s) => s.slideCleared);
-  const blockCleared = usePuzzleStore((s) => s.blockCleared);
-  const nonogramCleared = usePuzzleStore((s) => s.nonogramCleared);
-  const escapeCleared = usePuzzleStore((s) => s.escapeCleared);
+  const tierCleared = usePuzzleStore((s) => s.tierCleared);
   const dailyDays = usePuzzleStore((s) => s.dailyDays);
   const today = dateKey();
   const total = totalStarsOf(stars);
   // 별 키 앞부분(퍼즐 이름)으로 퍼즐별 별 합계를 셉니다.
   const starsOf = (...kinds: string[]) => Object.entries(stars).reduce((n, [k, v]) => (kinds.includes(k.split(":")[0]) ? n + v : n), 0);
+  // 한 난이도의 별: 쉬움은 "zones:3", 다른 난이도는 "zones:normal:3"
+  const starsOfTier = (p: TierPuzzle, t: Tier) =>
+    Object.entries(stars).reduce((n, [k, v]) => {
+      const parts = k.split(":");
+      return parts[0] === p && (t === "easy" ? parts.length === 2 : parts[1] === t) ? n + v : n;
+    }, 0);
   const sudokuCleared = (Object.keys(DIFFICULTY_LABEL) as SudokuDifficulty[]).reduce((n, d) => n + (stats[d]?.cleared ?? 0), 0);
+  const clearedOf = (p: TierPuzzle) => TIERS.reduce((n, t) => n + (tierCleared[p]?.[t] ?? 0), 0);
+  // 깬 적 있는 난이도만 줄로 보여 줍니다(아무것도 없으면 쉬움 한 줄).
+  const playedTiers = (p: TierPuzzle) => {
+    const played = TIERS.filter((t) => (tierCleared[p]?.[t] ?? 0) > 0);
+    return played.length ? played : (["easy"] as Tier[]);
+  };
+  const timedRows = (["zones", "blocks", "sliding"] as const).flatMap((p) => playedTiers(p).map((t) => [`${TIER_INFO[p].title} ${TIER_LABEL[t]}`, p, t] as const));
 
   return (
     <Page>
@@ -36,7 +47,7 @@ export default function RecordsPage() {
         <StreakCard days={dailyDays} today={today} />
         <Typography sx={{ fontSize: 13, color: dessert.cocoaSoft, px: 0.5, mt: -1, display: "flex", alignItems: "center", gap: 0.5 }}>
           <StarIcon size={15} />
-          별 {total.toLocaleString("ko-KR")}개 · 스도쿠 {sudokuCleared}판 · 보너스 {zoneCleared + slideCleared + blockCleared}판 · 스페셜 {nonogramCleared + escapeCleared}판
+          별 {total.toLocaleString("ko-KR")}개 · 스도쿠 {sudokuCleared}판 · 보너스 {clearedOf("zones") + clearedOf("sliding") + clearedOf("blocks")}판 · 스페셜 {clearedOf("nonogram") + clearedOf("escape")}판
         </Typography>
 
         <Section title="클래식 스도쿠" stars={starsOf("sudoku")}>
@@ -50,22 +61,17 @@ export default function RecordsPage() {
         <Section title="보너스 퍼즐" stars={starsOf("zones", "blocks", "sliding")}>
           <Table
             head={["퍼즐", "깬 레벨", "최고 기록", "평균"]}
-            rows={[
-              ["색깔 구역", `${zoneCleared}`, ...statCells(stats.zones).slice(1)],
-              ["블록 채우기", `${blockCleared}`, ...statCells(stats.blocks).slice(1)],
-              ["슬라이딩", `${slideCleared}`, ...statCells(stats.sliding).slice(1)],
-            ]}
+            rows={timedRows.map(([name, p, t]) => [name, `${tierCleared[p]?.[t] ?? 0}`, ...statCells(stats[tierStatKey(p, t)]).slice(1)])}
           />
-          <Trends items={[["색깔 구역", stats.zones], ["블록 채우기", stats.blocks], ["슬라이딩", stats.sliding]] as const} />
+          <Trends items={timedRows.map(([name, p, t]) => [name, stats[tierStatKey(p, t)]] as const)} />
         </Section>
 
         <Section title="스페셜 퍼즐" stars={starsOf("nonogram", "escape", "nonogram-old", "escape-old")}>
           <Table
             head={["퍼즐", "깬 레벨", "별"]}
-            rows={[
-              ["노노그램", `${nonogramCleared}`, `${starsOf("nonogram", "nonogram-old")}`],
-              ["블록 탈출", `${escapeCleared}`, `${starsOf("escape", "escape-old")}`],
-            ]}
+            rows={(["nonogram", "escape"] as const).flatMap((p) =>
+              playedTiers(p).map((t) => [`${TIER_INFO[p].title} ${TIER_LABEL[t]}`, `${tierCleared[p]?.[t] ?? 0}`, `${starsOfTier(p, t) + (t === "easy" ? starsOf(`${p}-old`) : 0)}`]),
+            )}
           />
         </Section>
 
@@ -136,7 +142,7 @@ function Trends({ items }: { items: readonly (readonly [string, PuzzleStat | und
         const up = speedup(recent);
         const clean = st!.clean ?? 0;
         return (
-          <Box key={name} sx={{ display: "grid", gridTemplateColumns: "72px minmax(0, 1fr) auto", alignItems: "end", gap: 1 }}>
+          <Box key={name} sx={{ display: "grid", gridTemplateColumns: "88px minmax(0, 1fr) auto", alignItems: "end", gap: 1 }}>
             <Typography sx={{ fontSize: 13, fontWeight: 700 }}>{name}</Typography>
             <Box role="img" aria-label={`${name} 최근 ${recent.length}판: ${recent.map(formatTime).join(", ")}`} sx={{ display: "flex", alignItems: "flex-end", gap: "3px", height: 28 }}>
               {recent.map((t, k) => (

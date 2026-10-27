@@ -1,4 +1,5 @@
 // 블록 채우기 한 판의 조작: 블록 고르기 → 칸 누르기로 놓기, 놓인 블록 누르기로 빼기.
+import type { Tier } from "../core/tier.ts";
 import type { HintStep } from "../core/hint.ts";
 import { popHistory, pushHistory, type History } from "../core/history.ts";
 import type { BlockPuzzle } from "./generator.ts";
@@ -6,6 +7,8 @@ import { cellsAt } from "./rules.ts";
 
 export interface BlockGame {
   level: number;
+  /** 난이도(없으면 쉬움, 오늘의 퍼즐은 없음) */
+  tier?: Tier;
   puzzle: BlockPuzzle;
   /** 블록마다 기준 칸 위치(아직 안 놓았으면 null) */
   placed: (number | null)[];
