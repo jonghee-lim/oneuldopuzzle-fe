@@ -48,7 +48,7 @@ const shots = process.argv[2];
   await page.getByRole("button", { name: "메모 2" }).tap();
   await cells.nth(empties[1]).tap();
   if (shots) await page.screenshot({ path: `${shots}/2-memo.png` });
-  await page.getByRole("button", { name: "메모 켜짐" }).tap();
+  await page.getByRole("button", { name: "메모", exact: true, pressed: true }).tap();
 
   // 틀린 숫자를 넣으면 빨갛게(같은 줄 처음 숫자와 겹치게)
   const target = empties[0];

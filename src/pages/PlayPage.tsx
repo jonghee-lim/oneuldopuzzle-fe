@@ -214,9 +214,9 @@ export default function PlayPage() {
           ),
         )}
         <ToolButton label="되돌리기" onClick={() => act(undo)} icon={<UndoIcon sx={{ fontSize: 18 }} />} />
-        {/* 메모는 작게 숨겨 둡니다(설계서). 켜면 숫자 패드가 민트색으로 바뀝니다. */}
+        {/* 메모는 작게 숨겨 둡니다(설계서). 켜면 버튼과 숫자 패드가 민트색으로 바뀝니다. 이름 길이를 바꾸지 않아 줄 너비가 그대로입니다. */}
         <ToolButton
-          label={game.memoMode ? "메모 켜짐" : "메모"}
+          label="메모"
           active={game.memoMode}
           onClick={() => updateGame(toggleMemo)}
           icon={<EditOutlinedIcon sx={{ fontSize: 18 }} />}
