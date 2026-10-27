@@ -12,7 +12,7 @@ import PuzzleBoard from "../components/puzzle/PuzzleBoard";
 import ToolButton from "../components/puzzle/ToolButton";
 import { cue } from "../platform/feedback";
 import { formatTime } from "../puzzle/sudoku/game";
-import { applyZoneHint, findZoneHint, placedOf, restartZone, setZoneTool, tapZoneCell, tickZone, undoZone, zoneGameConflicts, type ZoneGame, type ZoneTool } from "../puzzle/zones/game";
+import { applyZoneHint, findZoneHint, zoneHintSteps, placedOf, restartZone, setZoneTool, tapZoneCell, tickZone, undoZone, zoneGameConflicts, type ZoneGame, type ZoneTool } from "../puzzle/zones/game";
 import { usePuzzleStore } from "../stores/puzzleStore";
 import { useIsDaily } from "../components/daily/daily";
 import { useDailyClear } from "../components/daily/useDailyClear";
@@ -28,7 +28,7 @@ export default function ZonesPage() {
   const updateZone = usePuzzleStore((s) => (daily ? s.updateDailyZone : s.updateZone));
   const startDailyZone = usePuzzleStore((s) => s.startDailyZone);
   const read = () => (daily ? usePuzzleStore.getState().dailyZone : usePuzzleStore.getState().zoneGame);
-  const hint = useHint();
+  const hint = useHint(game?.cells.join(""), game?.puzzle.size);
   const dailyClear = useDailyClear(game?.elapsedSeconds ?? 0);
   const lastStars = usePuzzleStore((s) => s.lastStars);
   const [confirm, setConfirm] = useState(false);
@@ -78,6 +78,7 @@ export default function ZonesPage() {
       </Box>
       <Box sx={{ px: 1.5, pt: 1.5 }}>
         <PuzzleBoard
+          focus={hint.focus}
           size={size}
           label={`색깔 구역 판 ${size}×${size}`}
           onCellTap={(index) => act((g) => tapZoneCell(g, index), index)}
@@ -117,6 +118,7 @@ export default function ZonesPage() {
         {hint.button(() =>
           hint.give(
             () => findZoneHint(game),
+            (h) => zoneHintSteps(game, h),
             (h) => act((g) => applyZoneHint(g, h), h.index),
             (h) => `${Math.floor(h.index / size) + 1}행 ${(h.index % size) + 1}열 ${h.remove ? "마카롱은 자리가 아니라서 뺐어요." : "에 마카롱을 놓았어요."}`,
           ),

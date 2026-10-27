@@ -1,10 +1,10 @@
 // 진행 상황·점수·설정을 기기에 저장합니다. 계정·동기화는 이후 단계에서 공용 API에 붙입니다.
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { HINT_PER_UNLOCK, HINT_START, blockStars, dailyHintReward, escapeStars, nonogramStars, slideStars, starCount, sudokuStars, zoneStars, type StarLine } from "../puzzle/core/score";
-import { keepBest, newlyUnlocked, starKey, totalStarsOf } from "../puzzle/core/collection";
-import { DESSERTS, dessertForLevel, type DessertId } from "../theme/palette";
-import { dailyBlocks, dailyKinds, dailySlide, dailySudoku, dailyZones, dateKey, dayNumber, type DailyKind } from "../puzzle/core/daily";
+import { HINT_START, blockStars, dailyHintReward, escapeStars, nonogramStars, slideStars, starCount, sudokuStars, zoneStars, type StarLine } from "../puzzle/core/score";
+import { keepBest, starKey } from "../puzzle/core/collection";
+import { addRecord, type LastRecord, type PuzzleStat } from "../puzzle/core/record";
+import { dailyBlocks, dailyKinds, dailySlide, dailySudoku, dailyZones, dateKey, type DailyKind } from "../puzzle/core/daily";
 import { blocksForLevel } from "../puzzle/blocks/generator";
 import { newBlockGame, type BlockGame } from "../puzzle/blocks/game";
 import { slideForLevel } from "../puzzle/sliding/generator";
@@ -31,11 +31,7 @@ export interface PuzzleSettings {
 }
 
 /** 점수표 한 줄: 퍼즐 종류별로 푼 수·가장 빠른 시간·합계 시간 */
-export interface PuzzleStat {
-  cleared: number;
-  bestSeconds?: number;
-  totalSeconds: number;
-}
+export type { PuzzleStat } from "../puzzle/core/record";
 
 export type StatKey = SudokuDifficulty | "zones" | "sliding" | "blocks";
 
@@ -56,12 +52,10 @@ interface PuzzleState {
   /** 방금 푼 판에서 얻은 점수(완성 창에 보여 주고 저장하지 않음) */
   /** 방금 깬 레벨에서 받은 별(완성 창에 보여 줌) */
   lastStars: StarLine[] | null;
-  /** 방금 판으로 별이 쌓여 새로 열린 디저트(완성 창에 보여 줌) */
-  lastUnlock: DessertId | null;
+  /** 방금 깬 판의 시간과 그 전 최고 기록(완성 창에 보여 줌, 시간을 재지 않는 퍼즐은 null) */
+  lastRecord: LastRecord | null;
   /** 레벨별 가장 많이 받은 별(키는 collection.starKey) */
   stars: Record<string, number>;
-  /** 오늘의 퍼즐로 받은 디저트 수(디저트 id → 개수) */
-  treats: Record<string, number>;
   /** 색깔 구역 퍼즐 */
   zoneCleared: number;
   zoneGame: ZoneGame | null;
@@ -124,32 +118,15 @@ interface PuzzleState {
 
 const DAILY_RESET = { dailySudoku: null, dailyZone: null, dailyBlocks: null, dailySlide: null, dailyDone: [] as DailyKind[] };
 
-function addTreat(treats: Record<string, number>, id: string): Record<string, number> {
-  return { ...treats, [id]: (treats[id] ?? 0) + 1 };
+/** 한 판의 별을 기록합니다(같은 레벨은 가장 많이 받은 별을 남김). */
+function gainStars(state: PuzzleState, key: string, lines: StarLine[]): Pick<PuzzleState, "stars" | "lastStars" | "lastRecord"> {
+  return { stars: keepBest(state.stars, key, starCount(lines)), lastStars: lines, lastRecord: null };
 }
 
-/** 한 판의 별을 기록하고, 별로 새 디저트가 열리면 힌트를 줍니다. */
-function gainStars(state: PuzzleState, key: string, lines: StarLine[]): Pick<PuzzleState, "stars" | "hints" | "lastStars" | "lastUnlock"> {
-  const stars = keepBest(state.stars, key, starCount(lines));
-  const opened = newlyUnlocked(totalStarsOf(state.stars), totalStarsOf(stars), DESSERTS.length);
-  return {
-    stars,
-    hints: state.hints + opened.length * HINT_PER_UNLOCK,
-    lastStars: lines,
-    lastUnlock: opened.length ? DESSERTS[opened[opened.length - 1]].id : null,
-  };
-}
-
-function addStat(stats: PuzzleState["stats"], key: StatKey, seconds: number): PuzzleState["stats"] {
-  const prev = stats[key] ?? { cleared: 0, totalSeconds: 0 };
-  return {
-    ...stats,
-    [key]: {
-      cleared: prev.cleared + 1,
-      totalSeconds: prev.totalSeconds + seconds,
-      bestSeconds: prev.bestSeconds === undefined ? seconds : Math.min(prev.bestSeconds, seconds),
-    },
-  };
+/** 퍼즐 기록을 더하고, 완성 창에 보여 줄 방금 판 결과를 남깁니다. */
+function record(state: PuzzleState, key: StatKey, seconds: number, helped: boolean): Pick<PuzzleState, "stats" | "lastRecord"> {
+  const prev = state.stats[key];
+  return { stats: { ...state.stats, [key]: addRecord(prev, seconds, helped) }, lastRecord: { seconds, prevBest: prev?.bestSeconds } };
 }
 
 /** 난이도를 고른 적이 없으면 쉬움부터 */
@@ -184,8 +161,6 @@ export const usePuzzleStore = create<PuzzleState>()(
             hints: get().hints + reward,
             lastHintReward: reward,
             dailyDays: allDone && !get().dailyDays.includes(date) ? [...get().dailyDays, date].slice(-400) : get().dailyDays,
-            // 세 판을 다 풀면 그날의 디저트를 받습니다(도감에서 바로 열림).
-            treats: allDone ? addTreat(get().treats, dessertForLevel(dayNumber(date) + 1).id) : get().treats,
           } as Partial<PuzzleState>);
           return;
         }
@@ -201,9 +176,8 @@ export const usePuzzleStore = create<PuzzleState>()(
       chosenDifficulty: null,
       stats: {},
       lastStars: null,
-      lastUnlock: null,
+      lastRecord: null,
       stars: {},
-      treats: {},
       zoneCleared: 0,
       zoneGame: null,
       slideCleared: 0,
@@ -254,7 +228,7 @@ export const usePuzzleStore = create<PuzzleState>()(
             game,
             sudokuCleared: { ...get().sudokuCleared, [game.difficulty]: Math.max(get().sudokuCleared[game.difficulty] ?? 0, game.level) },
             bestSeconds: { ...get().bestSeconds, [key]: best ? Math.min(best, game.elapsedSeconds) : game.elapsedSeconds },
-            stats: addStat(get().stats, game.difficulty, game.elapsedSeconds),
+            ...record(get(), game.difficulty, game.elapsedSeconds, !!game.usedCheck || !!game.usedHint),
           });
           return;
         }
@@ -281,7 +255,7 @@ export const usePuzzleStore = create<PuzzleState>()(
             zoneGame,
             zoneCleared: Math.max(get().zoneCleared, zoneGame.level),
             ...gainStars(get(), starKey.zones(zoneGame.level), lines),
-            stats: addStat(get().stats, "zones", zoneGame.elapsedSeconds),
+            ...record(get(), "zones", zoneGame.elapsedSeconds, !!zoneGame.usedHint),
           });
           return;
         }
@@ -306,7 +280,7 @@ export const usePuzzleStore = create<PuzzleState>()(
             slideGame,
             slideCleared: Math.max(get().slideCleared, slideGame.level),
             ...gainStars(get(), starKey.sliding(slideGame.level), lines),
-            stats: addStat(get().stats, "sliding", slideGame.elapsedSeconds),
+            ...record(get(), "sliding", slideGame.elapsedSeconds, !!slideGame.usedHint),
           });
           return;
         }
@@ -331,7 +305,7 @@ export const usePuzzleStore = create<PuzzleState>()(
             blockGame,
             blockCleared: Math.max(get().blockCleared, blockGame.level),
             ...gainStars(get(), starKey.blocks(blockGame.level), lines),
-            stats: addStat(get().stats, "blocks", blockGame.elapsedSeconds),
+            ...record(get(), "blocks", blockGame.elapsedSeconds, !!blockGame.usedHint),
           });
           return;
         }
@@ -459,12 +433,12 @@ export const usePuzzleStore = create<PuzzleState>()(
           for (let l = 1; l <= (p.slideCleared ?? 0); l += 1) stars[starKey.sliding(l)] = 1;
           for (const st of Array.isArray(p.nonogramCleared) ? p.nonogramCleared : []) stars[starKey.nonogram(st)] = 1;
           for (const st of Object.keys(p.escapeBest ?? {})) stars[starKey.escape(Number(st))] = 1;
-          p = { ...p, stars, treats: {} };
+          p = { ...p, stars };
           delete p.score;
           delete p.lastScore;
         }
         // 버전 4는 노노그램·블록 탈출이 끝없는 레벨(예전엔 3단계씩). 1단계부터 이어서 푼 만큼을 깬 레벨로 치고,
-        // 예전 단계의 별은 다른 이름으로 남겨 모은 별 수(도감)가 줄지 않게 합니다.
+        // 예전 단계의 별은 다른 이름으로 남겨 모은 별 수가 줄지 않게 합니다.
         if (version < 4) {
           const oldNonogram = Array.isArray(p.nonogramCleared) ? p.nonogramCleared : [];
           const oldEscape = Object.keys(p.escapeBest ?? {}).map(Number);
@@ -507,7 +481,6 @@ export const usePuzzleStore = create<PuzzleState>()(
         escapeGame: s.escapeGame ? { ...s.escapeGame, history: [], selected: null } : null,
         escapeBest: s.escapeBest,
         stars: s.stars,
-        treats: s.treats,
         hints: s.hints,
         dailyDate: s.dailyDate,
         dailySudoku: s.dailySudoku ? { ...s.dailySudoku, history: [], selected: null } : null,

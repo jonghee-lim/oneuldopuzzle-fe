@@ -13,21 +13,21 @@ import ToolButton from "../components/puzzle/ToolButton";
 import { cue } from "../platform/feedback";
 import type { SudokuGame } from "../puzzle/sudoku/game";
 import { findConflicts } from "../puzzle/sudoku/rules";
-import DessertArt from "../components/dessert/DessertArt";
+import PuzzleThumb from "../components/home/PuzzleThumb";
 import NumberPad from "../components/sudoku/NumberPad";
 import SudokuCellContent from "../components/sudoku/SudokuCellContent";
 import { DIFFICULTY_LABEL } from "../puzzle/sudoku/generator";
 import {
-  applyHint, conflictsOf, deadCells, findHint, digitCounts, erase, newlyCompletedCells, formatTime, isFilledButWrong, isGiven, restart, tapCell, tapNumber, tick, toggleMemo, undo, wrongCells,
+  applyHint, conflictsOf, deadCells, findHint, digitCounts, sudokuHintSteps, erase, newlyCompletedCells, formatTime, isFilledButWrong, isGiven, restart, tapCell, tapNumber, tick, toggleMemo, undo, wrongCells,
 } from "../puzzle/sudoku/game";
 import { boxOf } from "../puzzle/sudoku/rules";
 import { sudokuNext, usePuzzleStore } from "../stores/puzzleStore";
-import { dailyDessert, useIsDaily } from "../components/daily/daily";
+import { useIsDaily } from "../components/daily/daily";
 import { useDailyClear } from "../components/daily/useDailyClear";
 import ClearDialog from "../components/puzzle/ClearDialog";
 import { useHint } from "../components/puzzle/useHint";
 import { flash, popIn } from "../theme/motion";
-import { dessert, dessertForLevel } from "../theme/palette";
+import { dessert } from "../theme/palette";
 
 const HINT_REASON = {
   only: "이 칸에는 이 숫자밖에 들어갈 수 없어요.",
@@ -50,7 +50,8 @@ export default function PlayPage() {
   const updateGame = usePuzzleStore((s) => (daily ? s.updateDailySudoku : s.updateGame));
   const startDailySudoku = usePuzzleStore((s) => s.startDailySudoku);
   const read = () => (daily ? usePuzzleStore.getState().dailySudoku : usePuzzleStore.getState().game);
-  const hint = useHint();
+  // 시계가 돌 때마다 판 객체가 바뀌므로, 놓인 내용이 바뀔 때만 힌트 단계를 처음부터 셉니다.
+  const hint = useHint(game?.values.join(","), 9);
   const dailyClear = useDailyClear(game?.elapsedSeconds ?? 0);
   const [confirmRestart, setConfirmRestart] = useState(false);
   const lastStars = usePuzzleStore((s) => s.lastStars);
@@ -138,7 +139,6 @@ export default function PlayPage() {
           <ArrowBackIosNewIcon fontSize="small" />
         </IconButton>
         <Box sx={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 1, minWidth: 0 }}>
-          <DessertArt id={(daily ? dailyDessert() : dessertForLevel(game.level)).id} size={30} />
           <Box>
             <Typography component="h1" sx={{ fontWeight: 700, fontSize: 20, lineHeight: 1.2 }}>
               {daily ? "오늘의 퍼즐" : `레벨 ${game.level}`}
@@ -153,6 +153,7 @@ export default function PlayPage() {
 
       <Box sx={{ px: 1.5, pt: 1 }}>
         <PuzzleBoard
+          focus={hint.focus}
           size={9}
           label="스도쿠 판"
           onCellTap={(index) => act((g) => tapCell(g, index, mode))}
@@ -209,6 +210,7 @@ export default function PlayPage() {
         {hint.button(() =>
           hint.give(
             () => findHint(game),
+            (h) => sudokuHintSteps(game, h),
             (h) => act((g) => applyHint(g, h)),
             (h) => (h.kind === "wrong" ? `${cellName(h.index)} 숫자가 틀려서 지웠어요.` : `${cellName(h.index)}에 ${h.digit}: ${HINT_REASON[h.reason]}`),
           ),
@@ -246,7 +248,7 @@ export default function PlayPage() {
       {daily && (
         <ClearDialog
           open={game.completed}
-          art={<DessertArt id={dailyDessert().id} size={112} />}
+          art={<PuzzleThumb kind="sudoku" size={96} />}
           title={dailyClear.title}
           detail={dailyClear.detail}
           nextLabel={dailyClear.nextLabel}
@@ -256,7 +258,7 @@ export default function PlayPage() {
       {hint.toast}
       <Dialog open={!daily && game.completed} slotProps={{ paper: { sx: { width: "min(360px, calc(100% - 32px))", p: 3, textAlign: "center", bgcolor: dessert.cream } } }}>
         <Box sx={{ display: "flex", justifyContent: "center", ...popIn }}>
-          <DessertArt id={dessertForLevel(game.level).id} size={112} />
+          <PuzzleThumb kind="sudoku" size={96} />
         </Box>
         <Typography component="h2" sx={{ fontSize: 22, fontWeight: 800, mt: 1 }}>
           레벨 {game.level} 완성!

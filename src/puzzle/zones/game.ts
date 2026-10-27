@@ -1,4 +1,5 @@
 // 색깔 구역 퍼즐 한 판의 조작. 칸을 누르면 지금 도구(디저트 놓기·X 표시)대로 바뀝니다.
+import type { HintStep } from "../core/hint.ts";
 import { popHistory, pushHistory, type History } from "../core/history.ts";
 import { isZoneSolved, zoneConflicts, type ZonePuzzle } from "./rules.ts";
 
@@ -73,6 +74,17 @@ export function findZoneHint(game: ZoneGame): ZoneHint | null {
     if (game.cells[index] !== 2) return { index, remove: false };
   }
   return null;
+}
+
+/** 힌트를 놓기 전에 보여 줄 단계: 볼 구역, 그다음 자리 */
+export function zoneHintSteps(game: ZoneGame, hint: ZoneHint): HintStep[] {
+  const { size, regions } = game.puzzle;
+  if (hint.remove) return [{ cells: [hint.index], text: "표시한 마카롱은 자리가 아니에요." }];
+  const region = regions.flatMap((g, k) => (g === regions[hint.index] ? [k] : []));
+  return [
+    { cells: region, text: "표시한 색 구역을 보세요. 다른 마카롱과 같은 줄이거나 맞닿는 칸을 빼 보세요." },
+    { cells: [hint.index], text: `이 구역의 마카롱은 ${Math.floor(hint.index / size) + 1}행 ${(hint.index % size) + 1}열이에요.` },
+  ];
 }
 
 export function applyZoneHint(game: ZoneGame, hint: ZoneHint): ZoneGame {

@@ -1,4 +1,5 @@
 // 블록 채우기 한 판의 조작: 블록 고르기 → 칸 누르기로 놓기, 놓인 블록 누르기로 빼기.
+import type { HintStep } from "../core/hint.ts";
 import { popHistory, pushHistory, type History } from "../core/history.ts";
 import type { BlockPuzzle } from "./generator.ts";
 import { cellsAt } from "./rules.ts";
@@ -106,6 +107,13 @@ export function findBlockHint(game: BlockGame): BlockHint | null {
   if (wrong >= 0) return { piece: wrong, anchor: game.placed[wrong]!, remove: true };
   const free = game.placed.findIndex((a) => a === null);
   return free < 0 ? null : { piece: free, anchor: anchors[free], remove: false };
+}
+
+/** 힌트로 놓기 전에 보여 줄 단계: 블록이 들어갈(또는 잘못 놓인) 자리 */
+export function blockHintSteps(game: BlockGame, hint: BlockHint): HintStep[] {
+  const { size, shapes } = game.puzzle;
+  const cells = cellsAt(shapes[hint.piece], size, hint.anchor) ?? [];
+  return [{ cells, text: hint.remove ? `${hint.piece + 1}번 블록은 이 자리가 아니에요.` : `${hint.piece + 1}번 블록이 들어갈 자리예요.` }];
 }
 
 export function applyBlockHint(game: BlockGame, hint: BlockHint): BlockGame {

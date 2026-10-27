@@ -71,3 +71,15 @@ export function streakOf(days: readonly string[], today: string): number {
   }
   return n;
 }
+
+/** 가장 길게 이어 간 연속 출석(일) */
+export function longestStreak(days: readonly string[]): number {
+  const nums = [...new Set(days)].map(dayNumber).sort((a, b) => a - b);
+  let best = 0;
+  let run = 0;
+  nums.forEach((n, k) => {
+    run = k > 0 && n === nums[k - 1] + 1 ? run + 1 : 1;
+    best = Math.max(best, run);
+  });
+  return best;
+}

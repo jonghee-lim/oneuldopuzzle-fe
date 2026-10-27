@@ -11,7 +11,7 @@ import PuzzleBoard from "../components/puzzle/PuzzleBoard";
 import ToolButton from "../components/puzzle/ToolButton";
 import { cue } from "../platform/feedback";
 import { applySlideHint, restartSlide, swipeSlide, tapSlide, tickSlide, undoSlide } from "../puzzle/sliding/game";
-import { slideHint } from "../puzzle/sliding/hint";
+import { slideHint, slideHintSteps } from "../puzzle/sliding/hint";
 import { movableCells } from "../puzzle/sliding/rules";
 import { formatTime } from "../puzzle/sudoku/game";
 import { usePuzzleStore } from "../stores/puzzleStore";
@@ -29,7 +29,7 @@ export default function SlidingPage() {
   const startSlide = usePuzzleStore((s) => s.startSlide);
   const updateSlide = usePuzzleStore((s) => (daily ? s.updateDailySlide : s.updateSlide));
   const startDailySlide = usePuzzleStore((s) => s.startDailySlide);
-  const hint = useHint();
+  const hint = useHint(game?.board.join(","), game?.puzzle.size);
   const dailyClear = useDailyClear(game?.elapsedSeconds ?? 0);
   const lastStars = usePuzzleStore((s) => s.lastStars);
   const [confirm, setConfirm] = useState(false);
@@ -106,6 +106,7 @@ export default function SlidingPage() {
       </Box>
       <Box sx={{ px: 1.5, pt: 1.5 }}>
         <PuzzleBoard
+          focus={hint.focus}
           size={size}
           label={`슬라이딩 판 ${size}×${size}`}
           onCellTap={(index) => {
@@ -139,6 +140,7 @@ export default function SlidingPage() {
         {hint.button(() =>
           hint.give(
             () => slideHint(game.board, size),
+            (index) => slideHintSteps(game.board, index),
             (index) => {
               updateSlide((g) => applySlideHint(g, index));
               cue(usePuzzleStore.getState()[daily ? "dailySlide" : "slideGame"]?.solved ? "clear" : "place");

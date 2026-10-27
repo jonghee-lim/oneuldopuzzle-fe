@@ -1,28 +1,4 @@
-// 디저트 도감: 별을 모으면 도감 순서대로 하나씩 열리고, 오늘의 퍼즐 세 판을 다 풀면 그날의 디저트를 받습니다(받으면 바로 열림).
-export const STARS_PER_DESSERT = 6;
-
-/** 별로 열린 디저트 수(첫 디저트는 처음부터 열림) */
-export function unlockedByStars(totalStars: number, dessertCount: number): number {
-  return Math.min(dessertCount, 1 + Math.floor(totalStars / STARS_PER_DESSERT));
-}
-
-/** 다음 디저트가 열리는 별 수(다 열렸으면 null) */
-export function nextUnlockAt(totalStars: number, dessertCount: number): number | null {
-  const open = unlockedByStars(totalStars, dessertCount);
-  return open >= dessertCount ? null : open * STARS_PER_DESSERT;
-}
-
-export function isUnlocked(index: number, id: string, totalStars: number, dessertCount: number, received: Readonly<Record<string, number>>): boolean {
-  return index < unlockedByStars(totalStars, dessertCount) || (received[id] ?? 0) > 0;
-}
-
-/** 별이 늘면서 새로 열린 디저트의 도감 순서(없으면 빈 배열) */
-export function newlyUnlocked(before: number, after: number, dessertCount: number): number[] {
-  const from = unlockedByStars(before, dessertCount);
-  const to = unlockedByStars(after, dessertCount);
-  return Array.from({ length: Math.max(0, to - from) }, (_, i) => from + i);
-}
-
+// 레벨 별 기록: 레벨마다 가장 많이 받은 별을 남깁니다(2026-10-27 디저트 도감은 없앰).
 /** 별 기록 합계 */
 export function totalStarsOf(stars: Readonly<Record<string, number>>): number {
   return Object.values(stars).reduce((a, b) => a + b, 0);

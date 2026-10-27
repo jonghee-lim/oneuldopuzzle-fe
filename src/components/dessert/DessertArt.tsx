@@ -1,5 +1,5 @@
 // 디저트 그림. 이모지는 기기마다 모양이 달라 앱 색과 어긋나므로, 앱 색으로 직접 그린 그림을 씁니다.
-// 레벨·출석 보상으로 모으는 디저트도 이 그림을 늘려 씁니다.
+// 퍼즐 조각(색깔 구역의 마카롱, 블록 탈출의 케이크 등)과 완성 그림에 씁니다.
 import { Box } from "@mui/material";
 import type { ReactNode } from "react";
 import { DESSERTS, type DessertId } from "../../theme/palette";

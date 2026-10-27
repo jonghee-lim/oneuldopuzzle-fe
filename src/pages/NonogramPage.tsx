@@ -13,7 +13,7 @@ import PuzzleBoard from "../components/puzzle/PuzzleBoard";
 import ToolButton from "../components/puzzle/ToolButton";
 import { useHint } from "../components/puzzle/useHint";
 import { cue } from "../platform/feedback";
-import { applyNonogramHint, colDone, findNonogramHint, restartNonogram, rowDone, setTool, tapNonogramCell, undoNonogram, type NonogramGame, type NonogramTool } from "../puzzle/nonogram/game";
+import { applyNonogramHint, colDone, findNonogramHint, nonogramHintSteps, restartNonogram, rowDone, setTool, tapNonogramCell, undoNonogram, type NonogramGame, type NonogramTool } from "../puzzle/nonogram/game";
 import { PICTURE_LEVELS } from "../puzzle/nonogram/generator";
 import { usePuzzleStore } from "../stores/puzzleStore";
 import { dessert } from "../theme/palette";
@@ -35,7 +35,7 @@ function NonogramLevel({ game }: { game: NonogramGame }) {
   const setGame = usePuzzleStore((s) => s.updateNonogram);
   const startNonogram = usePuzzleStore((s) => s.startNonogram);
   const [confirm, setConfirm] = useState(false);
-  const hint = useHint();
+  const hint = useHint(game.cells.join(""), game.width);
   const { width, height } = game;
   const doneRows = useMemo(() => Array.from({ length: height }, (_, r) => rowDone(game, r)), [game, height]);
   const doneCols = useMemo(() => Array.from({ length: width }, (_, c) => colDone(game, c)), [game, width]);
@@ -100,6 +100,7 @@ function NonogramLevel({ game }: { game: NonogramGame }) {
           ))}
         </Box>
         <PuzzleBoard
+          focus={hint.focus}
           size={width}
           label={`노노그램 판 ${height}×${width}`}
           onCellTap={(index) => {
@@ -124,6 +125,7 @@ function NonogramLevel({ game }: { game: NonogramGame }) {
         {hint.button(() =>
           hint.give(
             () => findNonogramHint(game),
+            (h) => nonogramHintSteps(game, h),
             (h) => setGame((g) => applyNonogramHint(g, h)),
             (h) => `${Math.floor(h.index / game.width) + 1}행 ${(h.index % game.width) + 1}열${h.remove ? "은 비어 있어야 해서 X로 바꿨어요." : "을 칠했어요."}`,
           ),

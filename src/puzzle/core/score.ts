@@ -4,9 +4,8 @@ import type { SudokuDifficulty } from "../sudoku/generator.ts";
 /** 난이도별 기준 시간(초). 이보다 빨리 풀면 별 하나를 더 줍니다. */
 export const SUDOKU_PAR_SECONDS: Record<SudokuDifficulty, number> = { easy: 300, normal: 540, hard: 900, expert: 1500 };
 
-/** 힌트: 처음 3개, 오늘의 퍼즐 한 판마다 1개, 세 판을 다 풀면 2개 더, 별로 디저트가 열릴 때마다 1개 */
+/** 힌트: 처음 3개, 오늘의 퍼즐 한 판마다 1개, 세 판을 다 풀면 2개 더 */
 export const HINT_START = 3;
-export const HINT_PER_UNLOCK = 1;
 export const HINT_PER_DAILY = 1;
 export const HINT_DAILY_BONUS = 2;
 
@@ -16,7 +15,7 @@ export function dailyHintReward(doneBefore: number, total: number): number {
 }
 
 /**
- * 레벨 별(2026-10-26 사용자 결정: 점수 대신 별과 디저트). 한 판에 별 3개까지: 완성 1개 + 아래 두 조건마다 1개.
+ * 레벨 별(2026-10-26 점수 대신 별, 2026-10-27 디저트 도감은 없애고 별은 잘 풀었다는 표시로만). 한 판에 별 3개까지: 완성 1개 + 아래 두 조건마다 1개.
  * 같은 레벨을 다시 풀면 가장 많이 받은 별을 남깁니다.
  */
 export interface StarLine {

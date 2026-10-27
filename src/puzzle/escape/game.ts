@@ -1,6 +1,7 @@
 // 블록 탈출 한 판의 조작. '블록 누르기 → 갈 칸 누르기' 또는 블록을 쓸어서(스와이프) 옮깁니다.
 import { popHistory, pushHistory, type History } from "../core/history.ts";
-import { ESCAPE_SIZE, formatBoard, isEscaped, moveBlock, parseBoard, reachablePositions, type Block } from "./rules.ts";
+import type { HintStep } from "../core/hint.ts";
+import { ESCAPE_SIZE, TARGET_ID, formatBoard, isEscaped, moveBlock, parseBoard, reachablePositions, type Block } from "./rules.ts";
 import { solveEscape } from "./solver.ts";
 
 export interface EscapeGame {
@@ -90,6 +91,14 @@ export function swipeBlock(game: EscapeGame, id: string, step: -1 | 1, cells: nu
 export function findEscapeHint(game: EscapeGame): [string, number] | null {
   if (game.escaped) return null;
   return solveEscape(formatBoard(game.blocks))?.moves[0] ?? null;
+}
+
+/** 힌트로 옮기기 전에 보여 줄 단계: 먼저 옮길 블록 */
+export function escapeHintSteps(game: EscapeGame, [id]: [string, number]): HintStep[] {
+  const b = game.blocks.find((x) => x.id === id);
+  if (!b) return [];
+  const cells = Array.from({ length: b.length }, (_, k) => (b.horizontal ? b.row * ESCAPE_SIZE + b.col + k : (b.row + k) * ESCAPE_SIZE + b.col));
+  return [{ cells, text: b.id === TARGET_ID ? "딸기 블록을 옮길 차례예요." : "가장 빠른 길은 표시한 블록부터 옮기는 거예요." }];
 }
 
 export function applyEscapeHint(game: EscapeGame, [id, pos]: [string, number]): EscapeGame {

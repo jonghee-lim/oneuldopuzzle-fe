@@ -10,7 +10,7 @@ import ConfirmRestart from "../components/puzzle/ConfirmRestart";
 import PuzzleBoard from "../components/puzzle/PuzzleBoard";
 import ToolButton from "../components/puzzle/ToolButton";
 import { cue } from "../platform/feedback";
-import { applyBlockHint, canPlace, findBlockHint, occupancy, restartBlocks, selectBlock, tapBlockCell, tickBlocks, undoBlocks } from "../puzzle/blocks/game";
+import { applyBlockHint, blockHintSteps, canPlace, findBlockHint, occupancy, restartBlocks, selectBlock, tapBlockCell, tickBlocks, undoBlocks } from "../puzzle/blocks/game";
 import type { Shape } from "../puzzle/blocks/rules";
 import { formatTime } from "../puzzle/sudoku/game";
 import { usePuzzleStore } from "../stores/puzzleStore";
@@ -28,7 +28,7 @@ export default function BlocksPage() {
   const startBlocks = usePuzzleStore((s) => s.startBlocks);
   const updateBlocks = usePuzzleStore((s) => (daily ? s.updateDailyBlocks : s.updateBlocks));
   const startDailyBlocks = usePuzzleStore((s) => s.startDailyBlocks);
-  const hint = useHint();
+  const hint = useHint(game?.placed.join(","), game?.puzzle.size);
   const dailyClear = useDailyClear(game?.elapsedSeconds ?? 0);
   const lastStars = usePuzzleStore((s) => s.lastStars);
   const [confirm, setConfirm] = useState(false);
@@ -70,6 +70,7 @@ export default function BlocksPage() {
       </Box>
       <Box sx={{ px: 1.5, pt: 1.5 }}>
         <PuzzleBoard
+          focus={hint.focus}
           size={size}
           label={`블록 채우기 판 ${size}×${size}`}
           onCellTap={(index) => {
@@ -148,6 +149,7 @@ export default function BlocksPage() {
         {hint.button(() =>
           hint.give(
             () => findBlockHint(game),
+            (h) => blockHintSteps(game, h),
             (h) => {
               const next = applyBlockHint(game, h);
               updateBlocks(() => next);

@@ -1,4 +1,5 @@
 // 슬라이딩 힌트: 다음에 누를 조각. 3×3은 최소 수 표로 정확히, 4×4는 가중 A* 탐색으로 맞춘 판까지 가는 길의 첫 수를 고릅니다.
+import type { HintStep } from "../core/hint.ts";
 import { isSolved, movableCells, slideFrom } from "./rules.ts";
 import { minSlides } from "./solver.ts";
 
@@ -112,4 +113,9 @@ function searchFirstMove(start: readonly number[], size: number, budget = 200_00
   }
   // 예산 안에 못 찾으면 가장 맞춘 판에 가까워지는 길의 첫 수
   return fallback?.first ?? null;
+}
+
+/** 힌트로 밀기 전에 보여 줄 단계: 밀 조각 */
+export function slideHintSteps(board: readonly number[], index: number): HintStep[] {
+  return [{ cells: [index], text: `${board[index]}번 조각을 밀어 보세요.` }];
 }
