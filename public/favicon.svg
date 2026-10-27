@@ -1,7 +1,21 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="16" fill="#FBF7F2"/>
-  <rect x="10" y="30" width="44" height="22" rx="6" fill="#F8C8D4"/>
-  <rect x="10" y="38" width="44" height="5" fill="#FFFFFF"/>
-  <path d="M10 32c0-10 9-16 22-16s22 6 22 16z" fill="#BFE8D9"/>
-  <circle cx="32" cy="13" r="6" fill="#E8899E"/>
+  <rect width="64" height="64" rx="14" fill="#FBF7F2"/>
+  <g transform="translate(32 32) scale(1.1) translate(-32 -32)">
+  <clipPath id="board"><rect x="6" y="6" width="52" height="52" rx="9"/></clipPath>
+  <rect x="6" y="6" width="52" height="52" rx="9" fill="#FFFFFF"/>
+  <g clip-path="url(#board)">
+    <rect x="40.67" y="40.67" width="17.33" height="17.33" fill="#B44D68"/>
+    <rect x="23.33" y="23.33" width="17.34" height="17.34" fill="#E8F6F0"/>
+  </g>
+  <path d="M23.33 6v52M40.67 6v52M6 23.33h52M6 40.67h52" stroke="#D9C9BC" stroke-width="1.2"/>
+  <rect x="6" y="6" width="52" height="52" rx="9" fill="none" stroke="#735A4B" stroke-width="2"/>
+  <g font-family="Arial, Helvetica, 'DejaVu Sans', sans-serif" font-weight="800" font-size="12.5" text-anchor="middle">
+    <text x="14.67" y="19.2" fill="#4E3B2E">5</text>
+    <text x="49.33" y="19.2" fill="#4E3B2E">3</text>
+    <text x="32" y="36.5" fill="#2E7D66">7</text>
+    <text x="14.67" y="53.8" fill="#4E3B2E">9</text>
+    <text x="32" y="53.8" fill="#2E7D66">1</text>
+    <text x="49.33" y="53.8" fill="#FFFFFF">2</text>
+  </g>
+  </g>
 </svg>
