@@ -1,16 +1,17 @@
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import LocalFireDepartmentIcon from "@mui/icons-material/LocalFireDepartment";
 import LightbulbOutlinedIcon from "@mui/icons-material/LightbulbOutlined";
 import { Box, ButtonBase, Typography } from "@mui/material";
 import { Link } from "react-router-dom";
-import DessertArt from "../dessert/DessertArt";
 import { dailyKinds, dailySudokuDifficulty, dateKey, streakOf } from "../../puzzle/core/daily";
+import { HINT_DAILY_BONUS, HINT_PER_DAILY } from "../../puzzle/core/score";
 import { DIFFICULTY_LABEL } from "../../puzzle/sudoku/generator";
 import { usePuzzleStore } from "../../stores/puzzleStore";
 import { dessert } from "../../theme/palette";
 import { radius } from "../../theme/shape";
-import { DAILY_NAME, DAILY_ROUTE, dailyDessert } from "./daily";
+import { DAILY_NAME, DAILY_ROUTE } from "./daily";
 
-/** 첫 화면 위 '오늘의 퍼즐' 띠: 날짜로 고른 세 판, 다 풀면 힌트 보너스와 연속 출석 */
+/** 첫 화면 위 '오늘의 퍼즐' 띠: 날짜로 고른 세 판, 다 풀면 힌트 보너스와 연속 출석(디저트는 2026-10-27 없앰) */
 export default function DailyBand() {
   const today = dateKey();
   const storedDate = usePuzzleStore((s) => s.dailyDate);
@@ -21,23 +22,24 @@ export default function DailyBand() {
   const done = storedDate === today ? storedDone : [];
   const kinds = dailyKinds(today);
   const streak = streakOf(days, today);
-  const treat = dailyDessert(today);
   const allDone = kinds.every((k) => done.includes(k));
 
   return (
     <Box component="section" aria-labelledby="daily-title" sx={{ borderRadius: radius.card, bgcolor: dessert.paper, p: 2, boxShadow: "0 1px 2px rgba(78,59,46,.06), 0 8px 24px rgba(78,59,46,.06)" }}>
       <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-        <DessertArt id={treat.id} size={52} title={treat.name} />
+        <Box aria-label={`연속 ${streak}일`} sx={{ width: 52, height: 52, flexShrink: 0, borderRadius: radius.item, bgcolor: streak > 0 ? dessert.strawberryMilk : dessert.creamDeep, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>
+          <LocalFireDepartmentIcon aria-hidden sx={{ fontSize: 20, color: streak > 0 ? "#F06A3B" : dessert.cocoaSoft }} />
+          <Box component="span" aria-hidden sx={{ fontSize: 16, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{streak}</Box>
+        </Box>
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Typography id="daily-title" component="h2" sx={{ fontSize: 18, fontWeight: 800 }}>
             오늘의 퍼즐 <Box component="span" sx={{ color: dessert.cocoaSoft, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{done.length}/{kinds.length}</Box>
           </Typography>
           <Typography sx={{ fontSize: 13, color: dessert.cocoaSoft }}>
-            {allDone ? "오늘 몫을 다 풀었어요. 내일 또 만나요!" : `세 판을 다 풀면 ${treat.name}${withParticle(treat.name)} 힌트를 받아요`}
+            {allDone ? "오늘 몫을 다 풀었어요. 내일 또 만나요!" : `한 판마다 힌트 ${HINT_PER_DAILY}개, 세 판 다 풀면 ${HINT_DAILY_BONUS}개 더`}
           </Typography>
         </Box>
         <Box sx={{ textAlign: "right", flexShrink: 0 }}>
-          <Typography sx={{ fontSize: 13, fontWeight: 800, color: dessert.strawberryDeep, fontVariantNumeric: "tabular-nums" }}>연속 {streak}일</Typography>
           <Typography aria-label={`남은 힌트 ${hints}개`} sx={{ fontSize: 13, fontWeight: 700, color: dessert.cocoaSoft, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 0.25 }}>
             <LightbulbOutlinedIcon aria-hidden sx={{ fontSize: 15 }} />
             {hints}
@@ -76,10 +78,4 @@ export default function DailyBand() {
       </Box>
     </Box>
   );
-}
-
-/** 받침이 있으면 '과', 없으면 '와' */
-function withParticle(word: string): string {
-  const code = word.charCodeAt(word.length - 1) - 0xac00;
-  return code >= 0 && code < 11172 && code % 28 !== 0 ? "과" : "와";
 }

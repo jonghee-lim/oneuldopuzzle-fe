@@ -13,7 +13,7 @@ import ToolButton from "../components/puzzle/ToolButton";
 import { cue } from "../platform/feedback";
 import type { SudokuGame } from "../puzzle/sudoku/game";
 import { findConflicts } from "../puzzle/sudoku/rules";
-import DessertArt from "../components/dessert/DessertArt";
+import PuzzleThumb from "../components/home/PuzzleThumb";
 import NumberPad from "../components/sudoku/NumberPad";
 import SudokuCellContent from "../components/sudoku/SudokuCellContent";
 import { DIFFICULTY_LABEL } from "../puzzle/sudoku/generator";
@@ -22,12 +22,12 @@ import {
 } from "../puzzle/sudoku/game";
 import { boxOf } from "../puzzle/sudoku/rules";
 import { sudokuNext, usePuzzleStore } from "../stores/puzzleStore";
-import { dailyDessert, useIsDaily } from "../components/daily/daily";
+import { useIsDaily } from "../components/daily/daily";
 import { useDailyClear } from "../components/daily/useDailyClear";
 import ClearDialog from "../components/puzzle/ClearDialog";
 import { useHint } from "../components/puzzle/useHint";
 import { flash, popIn } from "../theme/motion";
-import { dessert, dessertForLevel } from "../theme/palette";
+import { dessert } from "../theme/palette";
 
 const HINT_REASON = {
   only: "이 칸에는 이 숫자밖에 들어갈 수 없어요.",
@@ -138,7 +138,6 @@ export default function PlayPage() {
           <ArrowBackIosNewIcon fontSize="small" />
         </IconButton>
         <Box sx={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 1, minWidth: 0 }}>
-          <DessertArt id={(daily ? dailyDessert() : dessertForLevel(game.level)).id} size={30} />
           <Box>
             <Typography component="h1" sx={{ fontWeight: 700, fontSize: 20, lineHeight: 1.2 }}>
               {daily ? "오늘의 퍼즐" : `레벨 ${game.level}`}
@@ -246,7 +245,7 @@ export default function PlayPage() {
       {daily && (
         <ClearDialog
           open={game.completed}
-          art={<DessertArt id={dailyDessert().id} size={112} />}
+          art={<PuzzleThumb kind="sudoku" size={96} />}
           title={dailyClear.title}
           detail={dailyClear.detail}
           nextLabel={dailyClear.nextLabel}
@@ -256,7 +255,7 @@ export default function PlayPage() {
       {hint.toast}
       <Dialog open={!daily && game.completed} slotProps={{ paper: { sx: { width: "min(360px, calc(100% - 32px))", p: 3, textAlign: "center", bgcolor: dessert.cream } } }}>
         <Box sx={{ display: "flex", justifyContent: "center", ...popIn }}>
-          <DessertArt id={dessertForLevel(game.level).id} size={112} />
+          <PuzzleThumb kind="sudoku" size={96} />
         </Box>
         <Typography component="h2" sx={{ fontSize: 22, fontWeight: 800, mt: 1 }}>
           레벨 {game.level} 완성!

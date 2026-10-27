@@ -82,7 +82,7 @@ const shots = process.argv[2];
   await page.getByText("레벨 2").first().waitFor();
   if (shots) await page.screenshot({ path: `${shots}/5-level2.png` });
 
-  // 기록표·도감에 방금 푼 판의 별이 올라간다
+  // 기록표에 방금 푼 판의 별이 올라간다
   await page.goto(`${BASE}/records`);
   await page.getByRole("heading", { name: "기록표" }).waitFor();
   const st = await page.evaluate(() => JSON.parse(localStorage.getItem("oneuldopuzzle-v1")).state);
@@ -92,10 +92,6 @@ const shots = process.argv[2];
   // 레벨은 난이도마다 따로: 쉬움만 1레벨 깼고 어려움은 그대로 레벨 1
   assert.deepEqual(st.sudokuCleared, { easy: 1 });
   if (shots) await page.screenshot({ path: `${shots}/5b-records.png`, fullPage: true });
-  await page.goto(`${BASE}/desserts`);
-  await page.getByRole("heading", { name: "디저트 도감" }).waitFor();
-  await page.getByRole("listitem", { name: "딸기 케이크" }).waitFor();
-  if (shots) await page.screenshot({ path: `${shots}/5c-desserts.png`, fullPage: true });
 
   // 숫자 먼저 고르기
   await page.goto(`${BASE}/settings`);

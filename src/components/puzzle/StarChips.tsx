@@ -3,15 +3,10 @@ import type { StarLine } from "../../puzzle/core/score";
 import { dessert } from "../../theme/palette";
 import { radius } from "../../theme/shape";
 import StarIcon from "../dessert/StarIcon";
-import { usePuzzleStore } from "../../stores/puzzleStore";
-import { DESSERTS } from "../../theme/palette";
-import { HINT_PER_UNLOCK } from "../../puzzle/core/score";
 
 /** 완성 창에서 이번 판 별(1~3개)과 받은 조건·놓친 조건 */
 export default function StarChips({ lines }: { lines: readonly StarLine[] | null }) {
-  const unlock = usePuzzleStore((s) => s.lastUnlock);
   if (!lines || lines.length === 0) return null;
-  const opened = unlock ? DESSERTS.find((d) => d.id === unlock) : undefined;
   const got = lines.filter((l) => l.got).length;
   return (
     <Box sx={{ mt: 2 }}>
@@ -32,11 +27,6 @@ export default function StarChips({ lines }: { lines: readonly StarLine[] | null
           </Box>
         ))}
       </Box>
-      {opened && (
-        <Typography role="status" sx={{ mt: 1.5, px: 1.5, py: 1, borderRadius: radius.item, bgcolor: dessert.vanilla, fontSize: 14, fontWeight: 700 }}>
-          도감에 {opened.name} 열림! 힌트 +{HINT_PER_UNLOCK}개
-        </Typography>
-      )}
     </Box>
   );
 }

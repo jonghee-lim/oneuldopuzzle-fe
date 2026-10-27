@@ -3,12 +3,11 @@ import { Box, ButtonBase, IconButton, Typography } from "@mui/material";
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import DailyBand from "../components/daily/DailyBand";
-import DessertArt from "../components/dessert/DessertArt";
 import StarIcon from "../components/dessert/StarIcon";
 import PuzzleThumb from "../components/home/PuzzleThumb";
 import AppHeader from "../components/layout/AppHeader";
 import Page from "../components/layout/Page";
-import { STARS_PER_DESSERT, isUnlocked, nextUnlockAt, totalStarsOf, unlockedByStars } from "../puzzle/core/collection";
+import { totalStarsOf } from "../puzzle/core/collection";
 import { escapeForLevel } from "../puzzle/escape/levels";
 import { nonogramSizeForLevel } from "../puzzle/nonogram/generator";
 import { DIFFICULTY_LABEL } from "../puzzle/sudoku/generator";
@@ -17,12 +16,11 @@ import { blockSizeForLevel } from "../puzzle/blocks/generator";
 import { slideSizeForLevel } from "../puzzle/sliding/generator";
 import { zoneSizeForLevel } from "../puzzle/zones/generator";
 import { sudokuNext, usePuzzleStore } from "../stores/puzzleStore";
-import { DESSERTS, dessert } from "../theme/palette";
+import { dessert } from "../theme/palette";
 import { radius } from "../theme/shape";
 
 export default function HomePage() {
   const stars = usePuzzleStore((s) => s.stars);
-  const treats = usePuzzleStore((s) => s.treats);
   const sudokuCleared = usePuzzleStore((s) => s.sudokuCleared);
   const chosenDifficulty = usePuzzleStore((s) => s.chosenDifficulty);
   const game = usePuzzleStore((s) => s.game);
@@ -60,8 +58,8 @@ export default function HomePage() {
           <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
             <ButtonBase
               component={Link}
-              to="/desserts"
-              aria-label={`디저트 도감, 별 ${totalStars}개`}
+              to="/records"
+              aria-label={`기록표, 별 ${totalStars}개`}
               sx={{ gap: 0.5, px: 1.25, height: 36, borderRadius: radius.pill, bgcolor: dessert.vanilla, fontWeight: 800, fontSize: 15, fontVariantNumeric: "tabular-nums" }}
             >
               <StarIcon size={18} />
@@ -139,45 +137,8 @@ export default function HomePage() {
             resume={escapeResume}
           />
         </Box>
-        <Box sx={{ height: 12 }} />
-        <DessertBand totalStars={totalStars} treats={treats} />
       </Box>
     </Page>
-  );
-}
-
-/** 첫 화면 아래 도감 띠: 모은 디저트와 다음 디저트까지 남은 별 */
-function DessertBand({ totalStars, treats }: { totalStars: number; treats: Readonly<Record<string, number>> }) {
-  const n = DESSERTS.length;
-  const open = DESSERTS.filter((d, i) => isUnlocked(i, d.id, totalStars, n, treats)).length;
-  const next = nextUnlockAt(totalStars, n);
-  const shown = DESSERTS[Math.min(unlockedByStars(totalStars, n), n - 1)];
-  return (
-    <ButtonBase
-      component={Link}
-      to="/desserts"
-      sx={{ width: "100%", display: "flex", alignItems: "center", gap: 1.5, p: 2, borderRadius: radius.card, bgcolor: dessert.paper, textAlign: "left", boxShadow: "0 1px 2px rgba(78,59,46,.06), 0 8px 24px rgba(78,59,46,.06)" }}
-    >
-      <Box sx={next === null ? undefined : { filter: "brightness(0)", opacity: 0.15 }}>
-        <DessertArt id={shown.id} size={48} />
-      </Box>
-      <Box sx={{ flex: 1, minWidth: 0 }}>
-        <Typography component="h2" sx={{ fontSize: 17, fontWeight: 800 }}>
-          디저트 도감{" "}
-          <Box component="span" sx={{ color: dessert.cocoaSoft, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
-            {open}/{n}
-          </Box>
-        </Typography>
-        <Typography sx={{ fontSize: 13, color: dessert.cocoaSoft }}>
-          {next === null ? "별로 여는 디저트를 모두 모았어요" : `별 ${next - totalStars}개 더 모으면 다음 디저트`}
-        </Typography>
-        {next !== null && (
-          <Box aria-hidden sx={{ mt: 0.75, height: 6, borderRadius: radius.pill, bgcolor: dessert.creamDeep, overflow: "hidden" }}>
-            <Box sx={{ height: "100%", width: `${((totalStars % STARS_PER_DESSERT) / STARS_PER_DESSERT) * 100}%`, bgcolor: "#F2B33D" }} />
-          </Box>
-        )}
-      </Box>
-    </ButtonBase>
   );
 }
 

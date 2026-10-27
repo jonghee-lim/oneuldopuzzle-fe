@@ -1,12 +1,12 @@
 import { Box, Button, ToggleButton, ToggleButtonGroup, Typography } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import DessertArt from "../components/dessert/DessertArt";
+import PuzzleThumb from "../components/home/PuzzleThumb";
 import Page from "../components/layout/Page";
 import PuzzleHeader from "../components/layout/PuzzleHeader";
 import { DIFFICULTY_LABEL, type SudokuDifficulty } from "../puzzle/sudoku/generator";
 import { formatTime, hasProgress } from "../puzzle/sudoku/game";
 import { sudokuNext, usePuzzleStore } from "../stores/puzzleStore";
-import { dessert, dessertForLevel } from "../theme/palette";
+import { dessert } from "../theme/palette";
 import { radius } from "../theme/shape";
 
 /** 스도쿠 첫 화면: 난이도를 고르고 그 난이도의 다음 레벨을 시작합니다. 레벨은 난이도마다 따로 이어집니다. */
@@ -18,7 +18,7 @@ export default function SudokuPage() {
   const game = usePuzzleStore((s) => s.game);
   const paused = usePuzzleStore((s) => s.paused);
   const { difficulty, level } = sudokuNext({ sudokuCleared, chosenDifficulty });
-  const today = dessertForLevel(level);
+  const best = usePuzzleStore((s) => s.stats[difficulty]?.bestSeconds);
   // 고른 난이도로 풀던 판(지금 판 또는 난이도를 바꾸느라 멈춰 둔 판)에 숫자·메모를 넣었으면 이어 하기
   const resume = [game, paused[difficulty]].find((g) => g && g.level === level && g.difficulty === difficulty && !g.completed && hasProgress(g));
 
@@ -33,9 +33,9 @@ export default function SudokuPage() {
               <Typography id="level-title" component="h2" sx={{ fontSize: 30, fontWeight: 800, lineHeight: 1.15, letterSpacing: "-0.03em", mt: 0.25 }}>
                 레벨 {level}
               </Typography>
-              <Typography sx={{ fontSize: 15, color: dessert.cocoaSoft, mt: 0.25 }}>{today.name}</Typography>
+              <Typography sx={{ fontSize: 15, color: dessert.cocoaSoft, mt: 0.25 }}>{resume ? "풀던 판이 있어요" : best !== undefined ? `최고 기록 ${formatTime(best)}` : "첫 판을 풀어 봐요"}</Typography>
             </Box>
-            <DessertArt id={today.id} size="min(30vw, 128px)" title={today.name} />
+            <PuzzleThumb kind="sudoku" size={96} />
           </Box>
           <Box sx={{ px: 2.5, pt: 2, pb: 2.5 }}>
             <Typography id="difficulty-label" sx={{ mb: 1, fontSize: 14, fontWeight: 700 }}>

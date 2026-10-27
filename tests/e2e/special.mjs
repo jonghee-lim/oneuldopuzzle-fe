@@ -175,8 +175,8 @@ await page.evaluate(() =>
     JSON.stringify({ version: 2, state: { score: 300, sudokuCleared: { easy: 2 }, zoneCleared: 1, nonogramCleared: [0], escapeBest: { 1: 9 } } }),
   ),
 );
-await page.goto(`${BASE}/desserts`);
-await page.getByRole("heading", { name: "디저트 도감" }).waitFor();
+await page.goto(`${BASE}/records`);
+await page.getByRole("heading", { name: "기록표" }).waitFor();
 const migrated = await page.evaluate(() => JSON.parse(localStorage.getItem("oneuldopuzzle-v1")));
 assert.equal(migrated.version, 4);
 assert.deepEqual(migrated.state.stars, { "sudoku:easy:1": 1, "sudoku:easy:2": 1, "zones:1": 1, "nonogram-old:0": 1, "escape-old:1": 1 });

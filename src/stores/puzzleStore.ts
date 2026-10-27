@@ -1,10 +1,9 @@
 // 진행 상황·점수·설정을 기기에 저장합니다. 계정·동기화는 이후 단계에서 공용 API에 붙입니다.
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { HINT_PER_UNLOCK, HINT_START, blockStars, dailyHintReward, escapeStars, nonogramStars, slideStars, starCount, sudokuStars, zoneStars, type StarLine } from "../puzzle/core/score";
-import { keepBest, newlyUnlocked, starKey, totalStarsOf } from "../puzzle/core/collection";
-import { DESSERTS, dessertForLevel, type DessertId } from "../theme/palette";
-import { dailyBlocks, dailyKinds, dailySlide, dailySudoku, dailyZones, dateKey, dayNumber, type DailyKind } from "../puzzle/core/daily";
+import { HINT_START, blockStars, dailyHintReward, escapeStars, nonogramStars, slideStars, starCount, sudokuStars, zoneStars, type StarLine } from "../puzzle/core/score";
+import { keepBest, starKey } from "../puzzle/core/collection";
+import { dailyBlocks, dailyKinds, dailySlide, dailySudoku, dailyZones, dateKey, type DailyKind } from "../puzzle/core/daily";
 import { blocksForLevel } from "../puzzle/blocks/generator";
 import { newBlockGame, type BlockGame } from "../puzzle/blocks/game";
 import { slideForLevel } from "../puzzle/sliding/generator";
@@ -56,12 +55,8 @@ interface PuzzleState {
   /** 방금 푼 판에서 얻은 점수(완성 창에 보여 주고 저장하지 않음) */
   /** 방금 깬 레벨에서 받은 별(완성 창에 보여 줌) */
   lastStars: StarLine[] | null;
-  /** 방금 판으로 별이 쌓여 새로 열린 디저트(완성 창에 보여 줌) */
-  lastUnlock: DessertId | null;
   /** 레벨별 가장 많이 받은 별(키는 collection.starKey) */
   stars: Record<string, number>;
-  /** 오늘의 퍼즐로 받은 디저트 수(디저트 id → 개수) */
-  treats: Record<string, number>;
   /** 색깔 구역 퍼즐 */
   zoneCleared: number;
   zoneGame: ZoneGame | null;
@@ -124,20 +119,9 @@ interface PuzzleState {
 
 const DAILY_RESET = { dailySudoku: null, dailyZone: null, dailyBlocks: null, dailySlide: null, dailyDone: [] as DailyKind[] };
 
-function addTreat(treats: Record<string, number>, id: string): Record<string, number> {
-  return { ...treats, [id]: (treats[id] ?? 0) + 1 };
-}
-
-/** 한 판의 별을 기록하고, 별로 새 디저트가 열리면 힌트를 줍니다. */
-function gainStars(state: PuzzleState, key: string, lines: StarLine[]): Pick<PuzzleState, "stars" | "hints" | "lastStars" | "lastUnlock"> {
-  const stars = keepBest(state.stars, key, starCount(lines));
-  const opened = newlyUnlocked(totalStarsOf(state.stars), totalStarsOf(stars), DESSERTS.length);
-  return {
-    stars,
-    hints: state.hints + opened.length * HINT_PER_UNLOCK,
-    lastStars: lines,
-    lastUnlock: opened.length ? DESSERTS[opened[opened.length - 1]].id : null,
-  };
+/** 한 판의 별을 기록합니다(같은 레벨은 가장 많이 받은 별을 남김). */
+function gainStars(state: PuzzleState, key: string, lines: StarLine[]): Pick<PuzzleState, "stars" | "lastStars"> {
+  return { stars: keepBest(state.stars, key, starCount(lines)), lastStars: lines };
 }
 
 function addStat(stats: PuzzleState["stats"], key: StatKey, seconds: number): PuzzleState["stats"] {
@@ -184,8 +168,6 @@ export const usePuzzleStore = create<PuzzleState>()(
             hints: get().hints + reward,
             lastHintReward: reward,
             dailyDays: allDone && !get().dailyDays.includes(date) ? [...get().dailyDays, date].slice(-400) : get().dailyDays,
-            // 세 판을 다 풀면 그날의 디저트를 받습니다(도감에서 바로 열림).
-            treats: allDone ? addTreat(get().treats, dessertForLevel(dayNumber(date) + 1).id) : get().treats,
           } as Partial<PuzzleState>);
           return;
         }
@@ -201,9 +183,7 @@ export const usePuzzleStore = create<PuzzleState>()(
       chosenDifficulty: null,
       stats: {},
       lastStars: null,
-      lastUnlock: null,
       stars: {},
-      treats: {},
       zoneCleared: 0,
       zoneGame: null,
       slideCleared: 0,
@@ -459,12 +439,12 @@ export const usePuzzleStore = create<PuzzleState>()(
           for (let l = 1; l <= (p.slideCleared ?? 0); l += 1) stars[starKey.sliding(l)] = 1;
           for (const st of Array.isArray(p.nonogramCleared) ? p.nonogramCleared : []) stars[starKey.nonogram(st)] = 1;
           for (const st of Object.keys(p.escapeBest ?? {})) stars[starKey.escape(Number(st))] = 1;
-          p = { ...p, stars, treats: {} };
+          p = { ...p, stars };
           delete p.score;
           delete p.lastScore;
         }
         // 버전 4는 노노그램·블록 탈출이 끝없는 레벨(예전엔 3단계씩). 1단계부터 이어서 푼 만큼을 깬 레벨로 치고,
-        // 예전 단계의 별은 다른 이름으로 남겨 모은 별 수(도감)가 줄지 않게 합니다.
+        // 예전 단계의 별은 다른 이름으로 남겨 모은 별 수가 줄지 않게 합니다.
         if (version < 4) {
           const oldNonogram = Array.isArray(p.nonogramCleared) ? p.nonogramCleared : [];
           const oldEscape = Object.keys(p.escapeBest ?? {}).map(Number);
@@ -507,7 +487,6 @@ export const usePuzzleStore = create<PuzzleState>()(
         escapeGame: s.escapeGame ? { ...s.escapeGame, history: [], selected: null } : null,
         escapeBest: s.escapeBest,
         stars: s.stars,
-        treats: s.treats,
         hints: s.hints,
         dailyDate: s.dailyDate,
         dailySudoku: s.dailySudoku ? { ...s.dailySudoku, history: [], selected: null } : null,
