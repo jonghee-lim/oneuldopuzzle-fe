@@ -66,3 +66,28 @@ test("블록을 쓸어 옮기면 쓴 칸 수만큼, 막히면 갈 수 있는 데
   assert.equal(back.blocks, g.blocks); // 왼쪽 끝이라 못 감
   assert.equal(back.moves, 0);
 });
+
+test("끝없는 레벨 표: 판마다 풀리고 최소 이동 수가 적힌 값과 같으며, 레벨이 오를수록 줄지 않는다", async () => {
+  const { ESCAPE_TABLE } = await import("../src/puzzle/escape/table.ts");
+  assert.ok(ESCAPE_TABLE.length >= 50);
+  assert.equal(new Set(ESCAPE_TABLE.map(([b]) => b)).size, ESCAPE_TABLE.length);
+  let last = 0;
+  for (const [board, minMoves] of ESCAPE_TABLE) {
+    assert.equal(formatBoard(parseBoard(board)), board);
+    assert.equal(solveEscape(board)?.minMoves, minMoves, board);
+    assert.ok(minMoves >= last);
+    last = minMoves;
+  }
+});
+
+test("끝없는 레벨: 표가 끝나도 어려운 판을 돌려 가며 낸다", async () => {
+  const { ESCAPE_TABLE } = await import("../src/puzzle/escape/table.ts");
+  const { escapeForLevel } = await import("../src/puzzle/escape/levels.ts");
+  const n = ESCAPE_TABLE.length;
+  assert.equal(escapeForLevel(1).minMoves, 3);
+  assert.equal(escapeForLevel(n).board, ESCAPE_TABLE[n - 1][0]);
+  for (const level of [n + 1, n + 60, n + 61, n * 5]) {
+    const { board, minMoves } = escapeForLevel(level);
+    assert.ok(board.length === 36 && minMoves >= ESCAPE_TABLE[Math.max(0, n - 60)][1]);
+  }
+});

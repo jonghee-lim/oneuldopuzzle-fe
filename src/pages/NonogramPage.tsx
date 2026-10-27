@@ -3,54 +3,55 @@ import RestartAltIcon from "@mui/icons-material/RestartAlt";
 import SquareRoundedIcon from "@mui/icons-material/SquareRounded";
 import UndoIcon from "@mui/icons-material/Undo";
 import { Box, ToggleButton, ToggleButtonGroup, Typography } from "@mui/material";
-import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
 import DessertArt from "../components/dessert/DessertArt";
 import Page from "../components/layout/Page";
 import PuzzleHeader from "../components/layout/PuzzleHeader";
 import ClearDialog from "../components/puzzle/ClearDialog";
 import ConfirmRestart from "../components/puzzle/ConfirmRestart";
 import PuzzleBoard from "../components/puzzle/PuzzleBoard";
-import StageTabs from "../components/puzzle/StageTabs";
 import ToolButton from "../components/puzzle/ToolButton";
 import { useHint } from "../components/puzzle/useHint";
 import { cue } from "../platform/feedback";
-import { applyNonogramHint, colDone, findNonogramHint, newNonogramGame, restartNonogram, rowDone, setTool, tapNonogramCell, undoNonogram, type NonogramTool } from "../puzzle/nonogram/game";
-import { NONOGRAMS } from "../puzzle/nonogram/puzzles";
+import { applyNonogramHint, colDone, findNonogramHint, restartNonogram, rowDone, setTool, tapNonogramCell, undoNonogram, type NonogramGame, type NonogramTool } from "../puzzle/nonogram/game";
+import { PICTURE_LEVELS } from "../puzzle/nonogram/generator";
 import { usePuzzleStore } from "../stores/puzzleStore";
 import { dessert } from "../theme/palette";
 
+/** 노노그램(끝없는 레벨, 2026-10-27): 판이 점점 커지고, 정해 둔 레벨에는 손으로 그린 디저트 그림이 나옵니다. */
 export default function NonogramPage() {
-  const [params, setParams] = useSearchParams();
-  const stage = Math.min(Math.max(Number(params.get("stage") ?? 0) || 0, 0), NONOGRAMS.length - 1);
-  return <NonogramStage key={stage} stage={stage} onStage={(s) => setParams({ stage: String(s) }, { replace: true })} />;
+  const game = usePuzzleStore((s) => s.nonogramGame);
+  const nonogramCleared = usePuzzleStore((s) => s.nonogramCleared);
+  const startNonogram = usePuzzleStore((s) => s.startNonogram);
+  useEffect(() => {
+    const current = usePuzzleStore.getState().nonogramGame;
+    if (!current || (!current.solved && current.level !== nonogramCleared + 1)) startNonogram();
+  }, [nonogramCleared, startNonogram]);
+  if (!game) return null;
+  return <NonogramLevel game={game} />;
 }
 
-function NonogramStage({ stage, onStage }: { stage: number; onStage: (stage: number) => void }) {
-  const picture = NONOGRAMS[stage];
-  const [game, setGame] = useState(() => newNonogramGame(picture));
+function NonogramLevel({ game }: { game: NonogramGame }) {
+  const setGame = usePuzzleStore((s) => s.updateNonogram);
+  const startNonogram = usePuzzleStore((s) => s.startNonogram);
   const [confirm, setConfirm] = useState(false);
   const hint = useHint();
   const { width, height } = game;
   const doneRows = useMemo(() => Array.from({ length: height }, (_, r) => rowDone(game, r)), [game, height]);
   const doneCols = useMemo(() => Array.from({ length: width }, (_, c) => colDone(game, c)), [game, width]);
   const clueSize = width > 5 ? 13 : 16;
-  const cleared = usePuzzleStore((s) => s.nonogramCleared);
-  const clearNonogram = usePuzzleStore((s) => s.clearNonogram);
   const lastStars = usePuzzleStore((s) => s.lastStars);
+  const picture = PICTURE_LEVELS[game.level] !== undefined;
+  // 이미 풀린 판을 다시 열 때는 소리를 내지 않습니다.
+  const wasSolved = useRef(game.solved);
   useEffect(() => {
-    if (game.solved) {
-      clearNonogram(stage, game.mistakes ?? 0, !!game.usedHint);
-      cue("clear");
-    }
-  }, [game.solved, game.mistakes, game.usedHint, stage, clearNonogram]);
+    if (game.solved && !wasSolved.current) cue("clear");
+    wasSolved.current = game.solved;
+  }, [game.solved]);
 
   return (
     <Page>
-      <PuzzleHeader title="노노그램" subtitle={`스페셜 스테이지 · ${picture.rows.length}×${width}`} />
-      <Box sx={{ px: 1.5, pt: 1 }}>
-        <StageTabs stages={NONOGRAMS.map((_, i) => `${i + 1}단계`)} done={NONOGRAMS.map((_, i) => cleared.includes(i))} value={stage} onChange={onStage} />
-      </Box>
+      <PuzzleHeader title={`레벨 ${game.level}`} subtitle={`노노그램 · ${height}×${width}${picture ? " · 그림" : ""}`} />
 
       {/* 위 단서는 판의 열에, 왼쪽 단서는 판의 행에 맞춰 같은 격자에 둡니다. */}
       <Box sx={{ px: 1.5, pt: 2, display: "grid", gridTemplateColumns: "auto minmax(0, 1fr)", gridTemplateRows: "auto auto", columnGap: 0.75, rowGap: 0.75 }}>
@@ -162,11 +163,11 @@ function NonogramStage({ stage, onStage }: { stage: number; onStage: (stage: num
       <ClearDialog
         open={game.solved}
         art={<DessertArt id="cake" size={96} />}
-        title={`${picture.name} 완성!`}
-        detail="스페셜 노노그램을 풀었어요."
-        nextLabel="다음 단계"
+        title={picture ? `${game.name} 완성!` : `레벨 ${game.level} 완성!`}
+        detail={picture ? "디저트 그림이 나왔어요." : "숫자대로 무늬를 다 칠했어요."}
+        nextLabel="다음 레벨"
         stars={lastStars}
-        onNext={stage < NONOGRAMS.length - 1 ? () => onStage(stage + 1) : undefined}
+        onNext={() => startNonogram()}
       />
       {hint.toast}
     </Page>

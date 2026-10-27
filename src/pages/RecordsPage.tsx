@@ -5,8 +5,6 @@ import Page from "../components/layout/Page";
 import PuzzleHeader from "../components/layout/PuzzleHeader";
 import { totalStarsOf } from "../puzzle/core/collection";
 import { SUDOKU_PAR_SECONDS } from "../puzzle/core/score";
-import { ESCAPES } from "../puzzle/escape/puzzles";
-import { NONOGRAMS } from "../puzzle/nonogram/puzzles";
 import { DIFFICULTY_LABEL, type SudokuDifficulty } from "../puzzle/sudoku/generator";
 import { formatTime } from "../puzzle/sudoku/game";
 import { usePuzzleStore, type PuzzleStat } from "../stores/puzzleStore";
@@ -21,7 +19,7 @@ export default function RecordsPage() {
   const slideCleared = usePuzzleStore((s) => s.slideCleared);
   const blockCleared = usePuzzleStore((s) => s.blockCleared);
   const nonogramCleared = usePuzzleStore((s) => s.nonogramCleared);
-  const escapeBest = usePuzzleStore((s) => s.escapeBest);
+  const escapeCleared = usePuzzleStore((s) => s.escapeCleared);
   const total = totalStarsOf(stars);
   // 별 키 앞부분(퍼즐 이름)으로 퍼즐별 별 합계를 셉니다.
   const starsOf = (...kinds: string[]) => Object.entries(stars).reduce((n, [k, v]) => (kinds.includes(k.split(":")[0]) ? n + v : n), 0);
@@ -40,7 +38,7 @@ export default function RecordsPage() {
               <Box component="span" sx={{ fontSize: 20, ml: 0.5 }}>개</Box>
             </Typography>
             <Typography sx={{ fontSize: 13, color: dessert.cocoaSoft }}>
-              스도쿠 {sudokuCleared}판 · 보너스 {zoneCleared + slideCleared + blockCleared}판 · 스페셜 {nonogramCleared.length + Object.keys(escapeBest).length}판
+              스도쿠 {sudokuCleared}판 · 보너스 {zoneCleared + slideCleared + blockCleared}판 · 스페셜 {nonogramCleared + escapeCleared}판
             </Typography>
           </Box>
         </Box>
@@ -63,12 +61,12 @@ export default function RecordsPage() {
           />
         </Section>
 
-        <Section title="스페셜 스테이지" stars={starsOf("nonogram", "escape")}>
+        <Section title="스페셜 퍼즐" stars={starsOf("nonogram", "escape", "nonogram-old", "escape-old")}>
           <Table
-            head={["퍼즐", "단계", "내 기록", "최소"]}
+            head={["퍼즐", "깬 레벨", "별"]}
             rows={[
-              ...NONOGRAMS.map((_, i) => ["노노그램", `${i + 1}단계`, nonogramCleared.includes(i) ? "완성" : "-", "-"]),
-              ...ESCAPES.map((p, i) => ["블록 탈출", `${i + 1}단계`, escapeBest[i] !== undefined ? `${escapeBest[i]}수` : "-", `${p.minMoves}수`]),
+              ["노노그램", `${nonogramCleared}`, `${starsOf("nonogram", "nonogram-old")}`],
+              ["블록 탈출", `${escapeCleared}`, `${starsOf("escape", "escape-old")}`],
             ]}
           />
         </Section>

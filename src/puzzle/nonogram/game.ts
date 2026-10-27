@@ -6,6 +6,10 @@ export type NonogramTool = "fill" | "cross";
 
 /** 칸 상태: 0 비움, 1 칠함, 2 X(비어 있다고 표시) */
 export interface NonogramGame {
+  /** 레벨 번호(끝없는 레벨, 2026-10-27). 0이면 레벨 밖 판(시험용) */
+  level: number;
+  /** 그림 이름(손으로 그린 그림이면 완성 창에 보여 줌) */
+  name: string;
   width: number;
   height: number;
   solution: number[];
@@ -20,11 +24,13 @@ export interface NonogramGame {
   usedHint?: boolean;
 }
 
-export function newNonogramGame(picture: NonogramPicture): NonogramGame {
+export function newNonogramGame(picture: NonogramPicture, level = 0): NonogramGame {
   const width = picture.rows[0].length;
   const height = picture.rows.length;
   const solution = pictureGrid(picture);
   return {
+    level,
+    name: picture.name,
     width,
     height,
     solution,
