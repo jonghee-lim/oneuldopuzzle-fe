@@ -116,6 +116,22 @@ export function tapNumber(game: SudokuGame, digit: number, mode: InputMode): Sud
   return enter(game, game.selected, digit);
 }
 
+/**
+ * 자동 메모: 빈칸마다 같은 줄·칸줄·상자에 없는 숫자를 모두 메모합니다(되돌리기 한 번에 취소, 2026-10-27).
+ * 힌트가 아니라 메모를 대신 적어 주는 것이라 도움으로 세지 않습니다.
+ */
+export function autoNotes(game: SudokuGame): SudokuGame {
+  if (game.completed) return game;
+  const updates: Change[] = [];
+  for (let index = 0; index < CELLS; index += 1) {
+    if (game.values[index] !== 0) continue;
+    let notes = 0;
+    for (let d = 1; d <= 9; d += 1) if (!PEERS[index].some((p) => game.values[p] === d)) notes |= 1 << d;
+    updates.push({ index, value: 0, notes });
+  }
+  return apply(game, updates);
+}
+
 export function erase(game: SudokuGame): SudokuGame {
   const index = game.selected;
   if (index === null || isGiven(game, index) || game.completed) return game;

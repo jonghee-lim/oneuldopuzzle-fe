@@ -48,6 +48,11 @@ const shots = process.argv[2];
   await page.getByRole("button", { name: "메모 2" }).tap();
   await cells.nth(empties[1]).tap();
   if (shots) await page.screenshot({ path: `${shots}/2-memo.png` });
+  // 메모를 켜면 '자동 메모'가 보이고, 누르면 빈칸마다 후보가 채워진다(되돌리기 한 번에 취소)
+  await page.getByRole("button", { name: "빈칸마다 후보 숫자 자동 메모" }).tap();
+  const auto = await page.evaluate(() => JSON.parse(localStorage.getItem("oneuldopuzzle-v1")).state.game);
+  assert.ok(empties.every((i) => auto.notes[i] & (1 << game.solution[i])));
+  await page.getByRole("button", { name: "되돌리기" }).tap();
   await page.getByRole("button", { name: "메모", exact: true, pressed: true }).tap();
 
   // 틀린 숫자를 넣으면 빨갛게(같은 줄 처음 숫자와 겹치게)

@@ -18,7 +18,7 @@ import NumberPad from "../components/sudoku/NumberPad";
 import SudokuCellContent from "../components/sudoku/SudokuCellContent";
 import { DIFFICULTY_LABEL } from "../puzzle/sudoku/generator";
 import {
-  applyHint, conflictsOf, deadCells, findHint, digitCounts, sudokuHintSteps, erase, newlyCompletedCells, formatTime, isFilledButWrong, isGiven, restart, tapCell, tapNumber, tick, toggleMemo, undo, wrongCells,
+  applyHint, autoNotes, conflictsOf, deadCells, findHint, digitCounts, sudokuHintSteps, erase, newlyCompletedCells, formatTime, isFilledButWrong, isGiven, restart, tapCell, tapNumber, tick, toggleMemo, undo, wrongCells,
 } from "../puzzle/sudoku/game";
 import { boxOf } from "../puzzle/sudoku/rules";
 import { sudokuNext, usePuzzleStore } from "../stores/puzzleStore";
@@ -198,7 +198,12 @@ export default function PlayPage() {
             )}
           </Box>
         )}
-        {!stuck && mode === "number-first" && !game.activeNumber && (
+        {!stuck && game.memoMode && (
+          <Button size="small" onClick={() => act(autoNotes)} sx={{ fontWeight: 700, color: dessert.mintDeep, minHeight: 28, py: 0, textDecoration: "underline", textUnderlineOffset: "3px" }}>
+            빈칸마다 후보 숫자 자동 메모
+          </Button>
+        )}
+        {!stuck && !game.memoMode && mode === "number-first" && !game.activeNumber && (
           <Typography sx={{ fontSize: 13, color: "text.secondary" }}>숫자를 먼저 고른 뒤 칸을 눌러 주세요.</Typography>
         )}
       </Box>

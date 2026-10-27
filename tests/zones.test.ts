@@ -49,3 +49,21 @@ test("판 조작: 놓기·X·되돌리기·다시 하기·완성", () => {
   for (const [r, c] of p.solution.entries()) g = tapZoneCell(g, r * p.size + c);
   assert.ok(g.solved);
 });
+
+test("막힌 칸: 놓은 마카롱의 줄·칸줄·구역·이웃 빈칸, 마카롱을 빼면 사라진다", async () => {
+  const { blockedZoneCells } = await import("../src/puzzle/zones/game.ts");
+  const p = zonesForLevel(5);
+  const n = p.size;
+  let g = newZoneGame(5, p);
+  assert.equal(blockedZoneCells(g).size, 0);
+  const at = p.solution[0]; // 1행의 정답 칸
+  g = tapZoneCell(g, at);
+  const blocked = blockedZoneCells(g);
+  assert.ok(!blocked.has(at));
+  for (let c = 0; c < n; c += 1) if (c !== at) assert.ok(blocked.has(c), "같은 줄");
+  for (let r = 1; r < n; r += 1) assert.ok(blocked.has(r * n + at), "같은 칸줄");
+  p.regions.forEach((reg, i) => i !== at && reg === p.regions[at] && assert.ok(blocked.has(i), "같은 구역"));
+  // 다른 마카롱의 정답 칸은 막히지 않는다
+  for (let r = 1; r < n; r += 1) assert.ok(!blocked.has(r * n + p.solution[r]));
+  assert.equal(blockedZoneCells(undoZone(g)).size, 0);
+});

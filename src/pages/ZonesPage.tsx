@@ -15,7 +15,7 @@ import PuzzleBoard from "../components/puzzle/PuzzleBoard";
 import ToolButton from "../components/puzzle/ToolButton";
 import { cue } from "../platform/feedback";
 import { formatTime } from "../puzzle/sudoku/game";
-import { applyZoneHint, findZoneHint, zoneHintSteps, placedOf, restartZone, setZoneTool, tapZoneCell, tickZone, undoZone, zoneGameConflicts, type ZoneGame, type ZoneTool } from "../puzzle/zones/game";
+import { applyZoneHint, blockedZoneCells, findZoneHint, zoneHintSteps, placedOf, restartZone, setZoneTool, tapZoneCell, tickZone, undoZone, zoneGameConflicts, type ZoneGame, type ZoneTool } from "../puzzle/zones/game";
 import { usePuzzleStore } from "../stores/puzzleStore";
 import { useIsDaily } from "../components/daily/daily";
 import { useDailyClear } from "../components/daily/useDailyClear";
@@ -53,6 +53,8 @@ export default function ZonesPage() {
   }, [updateZone]);
 
   const conflicts = useMemo(() => (game ? zoneGameConflicts(game) : new Set<number>()), [game]);
+  const autoCross = usePuzzleStore((s) => s.settings.autoCross);
+  const blocked = useMemo(() => (game && autoCross ? blockedZoneCells(game) : new Set<number>()), [game, autoCross]);
   if (!game) return null;
   const { size, regions } = game.puzzle;
   const placed = placedOf(game).length;
@@ -87,7 +89,7 @@ export default function ZonesPage() {
           label={`색깔 구역 판 ${size}×${size}`}
           onCellTap={(index) => act((g) => tapZoneCell(g, index), index)}
           cellLabel={(index) => {
-            const state = game.cells[index] === 2 ? "마카롱" : game.cells[index] === 1 ? "X 표시" : "빈칸";
+            const state = game.cells[index] === 2 ? "마카롱" : game.cells[index] === 1 ? "X 표시" : blocked.has(index) ? "막힌 칸" : "빈칸";
             return `${Math.floor(index / size) + 1}행 ${(index % size) + 1}열, ${regions[index] + 1}번 구역, ${state}${conflicts.has(index) ? ", 겹침" : ""}`;
           }}
           cellColor={(index) => (conflicts.has(index) ? dessert.conflictMilk : ZONE_COLORS[regions[index] % ZONE_COLORS.length])}
@@ -103,6 +105,8 @@ export default function ZonesPage() {
               </Box>
             ) : game.cells[index] === 1 ? (
               <CloseIcon aria-hidden sx={{ fontSize: size > 6 ? 18 : 24, color: dessert.cocoaSoft, opacity: 0.7 }} />
+            ) : blocked.has(index) ? (
+              <CloseIcon aria-hidden sx={{ fontSize: size > 6 ? 12 : 16, color: dessert.cocoaSoft, opacity: 0.35 }} />
             ) : null
           }
         />

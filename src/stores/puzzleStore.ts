@@ -29,6 +29,8 @@ export interface PuzzleSettings {
   sound: boolean;
   /** 진동(지원하는 기기만) */
   haptics: boolean;
+  /** 색깔 구역: 마카롱이 못 가는 칸을 흐린 X로 자동 표시(기본 켜짐) */
+  autoCross: boolean;
 }
 
 /** 점수표 한 줄: 퍼즐 종류별로 푼 수·가장 빠른 시간·합계 시간 */
@@ -224,7 +226,7 @@ export const usePuzzleStore = create<PuzzleState>()(
       return {
       sudokuCleared: {},
       bestSeconds: {},
-      settings: { inputMode: "cell-first", highlightSame: true, showConflicts: true, sound: true, haptics: true },
+      settings: { inputMode: "cell-first", highlightSame: true, showConflicts: true, sound: true, haptics: true, autoCross: true },
       game: null,
       paused: {},
       chosenDifficulty: null,
