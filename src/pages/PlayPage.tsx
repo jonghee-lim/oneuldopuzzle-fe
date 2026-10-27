@@ -18,7 +18,7 @@ import NumberPad from "../components/sudoku/NumberPad";
 import SudokuCellContent from "../components/sudoku/SudokuCellContent";
 import { DIFFICULTY_LABEL } from "../puzzle/sudoku/generator";
 import {
-  applyHint, conflictsOf, deadCells, findHint, digitCounts, erase, newlyCompletedCells, formatTime, isFilledButWrong, isGiven, restart, tapCell, tapNumber, tick, toggleMemo, undo, wrongCells,
+  applyHint, conflictsOf, deadCells, findHint, digitCounts, sudokuHintSteps, erase, newlyCompletedCells, formatTime, isFilledButWrong, isGiven, restart, tapCell, tapNumber, tick, toggleMemo, undo, wrongCells,
 } from "../puzzle/sudoku/game";
 import { boxOf } from "../puzzle/sudoku/rules";
 import { sudokuNext, usePuzzleStore } from "../stores/puzzleStore";
@@ -50,7 +50,8 @@ export default function PlayPage() {
   const updateGame = usePuzzleStore((s) => (daily ? s.updateDailySudoku : s.updateGame));
   const startDailySudoku = usePuzzleStore((s) => s.startDailySudoku);
   const read = () => (daily ? usePuzzleStore.getState().dailySudoku : usePuzzleStore.getState().game);
-  const hint = useHint();
+  // 시계가 돌 때마다 판 객체가 바뀌므로, 놓인 내용이 바뀔 때만 힌트 단계를 처음부터 셉니다.
+  const hint = useHint(game?.values.join(","), 9);
   const dailyClear = useDailyClear(game?.elapsedSeconds ?? 0);
   const [confirmRestart, setConfirmRestart] = useState(false);
   const lastStars = usePuzzleStore((s) => s.lastStars);
@@ -152,6 +153,7 @@ export default function PlayPage() {
 
       <Box sx={{ px: 1.5, pt: 1 }}>
         <PuzzleBoard
+          focus={hint.focus}
           size={9}
           label="스도쿠 판"
           onCellTap={(index) => act((g) => tapCell(g, index, mode))}
@@ -208,6 +210,7 @@ export default function PlayPage() {
         {hint.button(() =>
           hint.give(
             () => findHint(game),
+            (h) => sudokuHintSteps(game, h),
             (h) => act((g) => applyHint(g, h)),
             (h) => (h.kind === "wrong" ? `${cellName(h.index)} 숫자가 틀려서 지웠어요.` : `${cellName(h.index)}에 ${h.digit}: ${HINT_REASON[h.reason]}`),
           ),

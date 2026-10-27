@@ -11,7 +11,7 @@ import PuzzleBoard from "../components/puzzle/PuzzleBoard";
 import ToolButton from "../components/puzzle/ToolButton";
 import { useHint } from "../components/puzzle/useHint";
 import { cue } from "../platform/feedback";
-import { applyEscapeHint, findEscapeHint, restartEscape, swipeBlock, tapBlock, tapEscapeCell, targetCells, undoEscape } from "../puzzle/escape/game";
+import { applyEscapeHint, escapeHintSteps, findEscapeHint, restartEscape, swipeBlock, tapBlock, tapEscapeCell, targetCells, undoEscape } from "../puzzle/escape/game";
 import type { Block } from "../puzzle/escape/rules";
 import { useSwipe, type Swipe } from "../components/puzzle/useSwipe";
 import type { ReactNode } from "react";
@@ -41,7 +41,7 @@ function EscapeLevel({ game }: { game: EscapeGame }) {
   const setGame = usePuzzleStore((s) => s.updateEscape);
   const startEscape = usePuzzleStore((s) => s.startEscape);
   const [confirm, setConfirm] = useState(false);
-  const hint = useHint();
+  const hint = useHint(JSON.stringify(game.blocks), ESCAPE_SIZE);
   const targets = useMemo(() => targetCells(game), [game]);
   const cellPct = 100 / ESCAPE_SIZE;
   const escapeBest = usePuzzleStore((s) => s.escapeBest);
@@ -112,6 +112,7 @@ function EscapeLevel({ game }: { game: EscapeGame }) {
       <PuzzleHeader title={`레벨 ${game.level}`} subtitle={`블록 탈출 · 최소 ${game.minMoves}수`} right={<span aria-label="이동 수">{game.moves}수</span>} />
       <Box sx={{ px: 1.5, pt: 2 }}>
         <PuzzleBoard
+          focus={hint.focus}
           size={ESCAPE_SIZE}
           label="블록 탈출 판"
           onCellTap={(index) => {
@@ -137,6 +138,7 @@ function EscapeLevel({ game }: { game: EscapeGame }) {
         {hint.button(() =>
           hint.give(
             () => findEscapeHint(game),
+            (h) => escapeHintSteps(game, h),
             (h) => setGame((g) => applyEscapeHint(g, h)),
             () => "가장 빠른 길로 블록 하나를 옮겼어요.",
           ),

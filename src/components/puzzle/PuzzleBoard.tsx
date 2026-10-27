@@ -26,12 +26,16 @@ interface PuzzleBoardProps {
   overlay?: ReactNode;
   /** 칸에서 손가락을 쓸었을 때(슬라이딩 등). 없으면 쓸기는 무시합니다. */
   onCellSwipe?: (index: number, dir: SwipeDir) => void;
+  /** 힌트가 비추는 칸(useHint().focus). 블록 위에도 보이게 맨 위 층에 그립니다. */
+  focus?: readonly number[] | null;
 }
 
 const THIN = `1px solid ${dessert.line}`;
 const THICK = `2px solid ${dessert.cocoaSoft}`;
+// 힌트로 비춘 칸 테두리. 빨강은 틀린 칸에만 쓰므로 노랑을 씁니다.
+const HINT_RING = "#E0A21B";
 
-export default function PuzzleBoard({ size, label, renderCell, cellLabel, onCellTap, cellColor, thickEdges, overlay, onCellSwipe }: PuzzleBoardProps) {
+export default function PuzzleBoard({ size, label, renderCell, cellLabel, onCellTap, cellColor, thickEdges, overlay, onCellSwipe, focus }: PuzzleBoardProps) {
   return (
     <Box
       role="grid"
@@ -76,6 +80,26 @@ export default function PuzzleBoard({ size, label, renderCell, cellLabel, onCell
         );
       })}
       {overlay}
+      {focus?.map((i) => (
+        <Box
+          key={`focus-${i}`}
+          aria-hidden
+          sx={{
+            position: "absolute",
+            left: `${((i % size) * 100) / size}%`,
+            top: `${(Math.floor(i / size) * 100) / size}%`,
+            width: `${100 / size}%`,
+            height: `${100 / size}%`,
+            pointerEvents: "none",
+            zIndex: 2,
+            bgcolor: "rgba(242, 179, 61, 0.22)",
+            boxShadow: `inset 0 0 0 2px ${HINT_RING}`,
+            "@keyframes hint-glow": { "0%, 100%": { opacity: 1 }, "50%": { opacity: 0.55 } },
+            animation: "hint-glow 1.4s ease-in-out infinite",
+            "@media (prefers-reduced-motion: reduce)": { animation: "none" },
+          }}
+        />
+      ))}
     </Box>
   );
 }

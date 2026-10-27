@@ -27,7 +27,7 @@ export default function DailyBand() {
   return (
     <Box component="section" aria-labelledby="daily-title" sx={{ borderRadius: radius.card, bgcolor: dessert.paper, p: 2, boxShadow: "0 1px 2px rgba(78,59,46,.06), 0 8px 24px rgba(78,59,46,.06)" }}>
       <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-        <Box aria-label={`연속 ${streak}일`} sx={{ width: 52, height: 52, flexShrink: 0, borderRadius: radius.item, bgcolor: streak > 0 ? dessert.strawberryMilk : dessert.creamDeep, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>
+        <Box role="img" aria-label={`연속 ${streak}일`} sx={{ width: 52, height: 52, flexShrink: 0, borderRadius: radius.item, bgcolor: streak > 0 ? dessert.strawberryMilk : dessert.creamDeep, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>
           <LocalFireDepartmentIcon aria-hidden sx={{ fontSize: 20, color: streak > 0 ? "#F06A3B" : dessert.cocoaSoft }} />
           <Box component="span" aria-hidden sx={{ fontSize: 16, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{streak}</Box>
         </Box>

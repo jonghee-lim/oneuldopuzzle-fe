@@ -1,6 +1,7 @@
 // 스도쿠 한 판의 상태와 조작. 화면과 떨어진 순수 함수라 단위 테스트로 확인합니다.
 // 입력 방식 두 가지(설계서): 칸 먼저 누르기(cell-first), 숫자 먼저 고르기(number-first).
 import { popHistory, pushHistory, type History } from "../core/history.ts";
+import type { HintStep } from "../core/hint.ts";
 import { CELLS, PEERS, UNITS, findConflicts, type SudokuGrid } from "./rules.ts";
 import type { SudokuDifficulty } from "./generator.ts";
 
@@ -166,6 +167,32 @@ export function findHint(game: SudokuGame): SudokuHint | null {
   }
   const empty = cells.findIndex((v) => v === 0);
   return empty < 0 ? null : { kind: "place", index: empty, digit: game.solution[empty], reason: "answer" };
+}
+
+const BOX_NAME = ["왼쪽 위", "가운데 위", "오른쪽 위", "왼쪽 가운데", "한가운데", "오른쪽 가운데", "왼쪽 아래", "가운데 아래", "오른쪽 아래"];
+
+/** 힌트를 넣기 전에 보여 줄 단계: 볼 곳, 그다음 이유 */
+export function sudokuHintSteps(game: SudokuGame, hint: SudokuHint): HintStep[] {
+  const i = hint.index;
+  if (hint.kind === "wrong") return [{ cells: [i], text: "표시한 칸의 숫자가 답과 달라요." }];
+  const d = hint.digit;
+  const row = Math.floor(i / 9);
+  const col = i % 9;
+  const box = Math.floor(row / 3) * 3 + Math.floor(col / 3);
+  if (hint.reason === "only") {
+    return [
+      { cells: [i], text: "표시한 칸을 보세요. 같은 가로줄·세로줄·상자에 이미 있는 숫자를 지워 보세요." },
+      { cells: [i, ...PEERS[i].filter((p) => game.values[p])], text: `둘레에 있는 숫자를 빼면 이 칸에는 ${d}만 남아요.` },
+    ];
+  }
+  if (hint.reason === "answer") return [{ cells: [i], text: "이 칸은 지금 보이는 단서만으로는 찾기 어려워요." }];
+  const [unit, name] =
+    hint.reason === "row" ? [UNITS[row], `${row + 1}번째 가로줄`] : hint.reason === "col" ? [UNITS[9 + col], `${col + 1}번째 세로줄`] : [UNITS[18 + box], `${BOX_NAME[box]} 상자`];
+  const same = game.values.flatMap((v, k) => (v === d ? [k] : []));
+  return [
+    { cells: [...unit], text: `${name}에서 ${d}의 자리를 찾아보세요.` },
+    { cells: [i, ...same], text: `다른 ${d}들이 막고 있어서 ${name}에서 ${d}의 자리는 여기 하나뿐이에요.` },
+  ];
 }
 
 /** 힌트를 판에 반영: 틀린 칸은 비우고, 알려 준 칸에는 숫자를 넣습니다. 둘 다 그 칸을 골라 둡니다. */

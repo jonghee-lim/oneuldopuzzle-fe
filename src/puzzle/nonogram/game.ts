@@ -1,4 +1,5 @@
 // 노노그램 한 판의 조작. 칸을 누르면 지금 도구(칠하기·X 표시)대로 바뀝니다. 끌어서 여러 칸 칠하기는 쓰지 않습니다.
+import type { HintStep } from "../core/hint.ts";
 import { popHistory, pushHistory, type History } from "../core/history.ts";
 import { cluesOf, lineClue, pictureGrid, sameClue, type NonogramClues, type NonogramPicture } from "./rules.ts";
 
@@ -98,6 +99,17 @@ export function findNonogramHint(game: NonogramGame): NonogramHint | null {
     if (done > bestDone) [best, bestDone] = [missing[0], done];
   }
   return best === null ? null : { index: best, remove: false };
+}
+
+/** 힌트를 칠하기 전에 보여 줄 단계: 볼 줄, 그다음 칸 */
+export function nonogramHintSteps(game: NonogramGame, hint: NonogramHint): HintStep[] {
+  if (hint.remove) return [{ cells: [hint.index], text: "표시한 칸은 비어 있어야 해요." }];
+  const r = Math.floor(hint.index / game.width);
+  const row = Array.from({ length: game.width }, (_, c) => r * game.width + c);
+  return [
+    { cells: row, text: `${r + 1}번째 줄 단서를 보세요. 칠한 칸과 단서를 맞춰 보세요.` },
+    { cells: [hint.index], text: "이 줄에서 표시한 칸은 칠해야 해요." },
+  ];
 }
 
 export function applyNonogramHint(game: NonogramGame, hint: NonogramHint): NonogramGame {

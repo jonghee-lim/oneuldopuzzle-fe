@@ -17,10 +17,15 @@ await page.goto(BASE);
 await page.getByRole("heading", { name: /오늘의 퍼즐/ }).waitFor();
 if (shots) await page.screenshot({ path: `${shots}/d0-home.png`, fullPage: true });
 
-// 처음 힌트는 3개. 스도쿠에서 하나 쓰면 2개
+// 처음 힌트는 3개. 힌트는 볼 곳·이유를 먼저 비춰 주고(힌트를 쓰지 않음), 그다음에 대신 넣으며 하나를 씁니다.
 await page.getByRole("link", { name: /^오늘의 퍼즐 스도쿠/ }).tap();
 await page.getByRole("heading", { name: "오늘의 퍼즐" }).waitFor();
 await page.getByRole("button", { name: "힌트 3" }).tap();
+await page.locator(".MuiSnackbarContent-message").first().waitFor();
+assert.equal((await state()).hints, 3);
+assert.equal((await state()).dailySudoku.usedHint ?? false, false);
+if (shots) await page.screenshot({ path: `${shots}/d1a-sudoku-hint-step.png` });
+for (let n = 0; n < 3 && !(await page.getByRole("button", { name: "힌트 2" }).count()); n += 1) await page.getByRole("button", { name: "힌트 3" }).tap();
 await page.getByRole("button", { name: "힌트 2" }).waitFor();
 await page.getByRole("alert").or(page.locator(".MuiSnackbarContent-message")).first().waitFor();
 if (shots) await page.screenshot({ path: `${shots}/d1-sudoku-hint.png` });
@@ -38,7 +43,7 @@ await page.evaluate(() => {
 await page.reload();
 async function solveWithHints() {
   const dialog = page.getByRole("dialog");
-  for (let n = 0; n < 200 && !(await dialog.isVisible()); n += 1) await page.getByRole("button", { name: /^힌트 \d+$/ }).tap();
+  for (let n = 0; n < 900 && !(await dialog.isVisible()); n += 1) await page.getByRole("button", { name: /^힌트 \d+$/ }).tap();
   await dialog.waitFor();
 }
 await solveWithHints();
@@ -66,7 +71,7 @@ assert.equal(end.zoneCleared ?? 0, 0);
 
 await page.getByRole("button", { name: "처음 화면" }).tap();
 await page.getByText("오늘 몫을 다 풀었어요. 내일 또 만나요!").waitFor();
-await page.getByText("연속 1일").waitFor();
+await page.getByRole("img", { name: "연속 1일" }).waitFor();
 if (shots) await page.screenshot({ path: `${shots}/d4-home-done.png`, fullPage: true });
 
 assert.deepEqual(errors, []);
