@@ -45,6 +45,7 @@ export default function SettingsPage() {
         <Group title="화면">
           <Row label="같은 숫자 강조" checked={settings.highlightSame} onChange={(v) => updateSettings({ highlightSame: v })} />
           <Row label="겹친 숫자 빨갛게 표시" checked={settings.showConflicts} onChange={(v) => updateSettings({ showConflicts: v })} divider />
+          <Row label="막힌 칸 자동 X (색깔 구역·노노그램)" checked={settings.autoCross} onChange={(v) => updateSettings({ autoCross: v })} divider />
         </Group>
         <Group title="소리·진동">
           <Row label="효과음" checked={settings.sound} onChange={(v) => updateSettings({ sound: v })} />

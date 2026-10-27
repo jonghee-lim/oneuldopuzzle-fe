@@ -95,6 +95,8 @@ const zc = page.getByRole("gridcell");
 // 붙어 있는 두 자리에 놓으면 겹침 안내가 나오고 되돌리기로 지운다
 const first = zone.puzzle.solution[0];
 await zc.nth(first).tap();
+// 놓은 마카롱의 줄·칸줄·구역·이웃은 흐린 X(막힌 칸)로 보인다
+assert.match((await zc.nth(zone.puzzle.size + first).getAttribute("aria-label")) ?? "", /막힌 칸/);
 await zc.nth(zone.puzzle.size + first).tap();
 await page.getByText("같은 줄·구역에 있거나 붙어 있는 마카롱이 있어요.").waitFor();
 await page.getByRole("button", { name: "되돌리기" }).tap();

@@ -42,6 +42,9 @@ function NonogramLevel({ game }: { game: NonogramGame }) {
   const { width, height } = game;
   const doneRows = useMemo(() => Array.from({ length: height }, (_, r) => rowDone(game, r)), [game, height]);
   const doneCols = useMemo(() => Array.from({ length: width }, (_, c) => colDone(game, c)), [game, width]);
+  // 단서를 다 채운 줄의 빈칸은 흐린 X로 보여 줍니다(설정 '막힌 칸 자동 X', 저장하지 않음, 2026-10-27).
+  const autoCross = usePuzzleStore((s) => s.settings.autoCross);
+  const crossed = (index: number) => autoCross && game.cells[index] === 0 && (doneRows[Math.floor(index / width)] || doneCols[index % width]);
   const clueSize = width > 5 ? 13 : 16;
   const lastStars = usePuzzleStore((s) => s.lastStars);
   const tier = game.tier ?? "easy";
@@ -112,13 +115,17 @@ function NonogramLevel({ game }: { game: NonogramGame }) {
             setGame((g) => tapNonogramCell(g, index));
           }}
           cellLabel={(index) => {
-            const state = game.cells[index] === 1 ? "칠함" : game.cells[index] === 2 ? "X 표시" : "빈칸";
+            const state = game.cells[index] === 1 ? "칠함" : game.cells[index] === 2 ? "X 표시" : crossed(index) ? "다 채운 줄의 빈칸" : "빈칸";
             return `${Math.floor(index / width) + 1}행 ${(index % width) + 1}열 ${state}`;
           }}
           thickEdges={(index) => ({ top: Math.floor(index / width) % 5 === 0, left: (index % width) % 5 === 0 })}
           cellColor={(index) => (game.cells[index] === 1 ? dessert.strawberryDeep : dessert.paper)}
           renderCell={(index) =>
-            game.cells[index] === 2 ? <CloseIcon aria-hidden sx={{ fontSize: width > 5 ? 18 : 28, color: dessert.cocoaSoft }} /> : null
+            game.cells[index] === 2 ? (
+              <CloseIcon aria-hidden sx={{ fontSize: width > 5 ? 18 : 28, color: dessert.cocoaSoft }} />
+            ) : crossed(index) ? (
+              <CloseIcon aria-hidden sx={{ fontSize: width > 5 ? 12 : 18, color: dessert.cocoaSoft, opacity: 0.35 }} />
+            ) : null
           }
         />
       </Box>

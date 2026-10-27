@@ -125,3 +125,23 @@ test("답대로 다 채운 줄을 찾는다", async () => {
   assert.ok(row.every((i) => cells.includes(i)));
   assert.deepEqual(newlyCompletedCells(done, done), []);
 });
+
+test("자동 메모: 빈칸마다 들어갈 수 있는 숫자를 모두 메모하고, 되돌리기 한 번에 취소된다", async () => {
+  const { puzzleForLevel } = await import("../src/puzzle/sudoku/generator.ts");
+  const { autoNotes, newGame, undo } = await import("../src/puzzle/sudoku/game.ts");
+  const { PEERS } = await import("../src/puzzle/sudoku/rules.ts");
+  const p = puzzleForLevel(5, "normal");
+  const g = newGame({ id: p.id, level: 5, difficulty: "normal", puzzle: p.puzzle, solution: p.solution });
+  const a = autoNotes(g);
+  for (let i = 0; i < 81; i += 1) {
+    if (p.puzzle[i]) {
+      assert.equal(a.notes[i], 0);
+      continue;
+    }
+    // 답 숫자는 언제나 후보에 들어 있고, 이웃에 있는 숫자는 빠진다
+    assert.ok(a.notes[i] & (1 << p.solution[i]));
+    for (const peer of PEERS[i]) if (p.puzzle[peer]) assert.equal(a.notes[i] & (1 << p.puzzle[peer]), 0);
+  }
+  assert.equal(a.usedHint, undefined);
+  assert.deepEqual(undo(a).notes, g.notes);
+});
