@@ -1,4 +1,7 @@
 import CloseIcon from "@mui/icons-material/Close";
+import { needsStart, useTierNext } from "../components/tier/useTier";
+import { TIER_ROUTE } from "../components/tier/tierRoutes";
+import { TIER_LABEL } from "../puzzle/core/tier";
 import RestartAltIcon from "@mui/icons-material/RestartAlt";
 import SquareRoundedIcon from "@mui/icons-material/SquareRounded";
 import UndoIcon from "@mui/icons-material/Undo";
@@ -14,19 +17,19 @@ import ToolButton from "../components/puzzle/ToolButton";
 import { useHint } from "../components/puzzle/useHint";
 import { cue } from "../platform/feedback";
 import { applyNonogramHint, colDone, findNonogramHint, nonogramHintSteps, restartNonogram, rowDone, setTool, tapNonogramCell, undoNonogram, type NonogramGame, type NonogramTool } from "../puzzle/nonogram/game";
-import { PICTURE_LEVELS } from "../puzzle/nonogram/generator";
+import { pictureAt } from "../puzzle/nonogram/generator";
 import { usePuzzleStore } from "../stores/puzzleStore";
 import { dessert } from "../theme/palette";
 
 /** 노노그램(끝없는 레벨, 2026-10-27): 판이 점점 커지고, 정해 둔 레벨에는 손으로 그린 디저트 그림이 나옵니다. */
 export default function NonogramPage() {
   const game = usePuzzleStore((s) => s.nonogramGame);
-  const nonogramCleared = usePuzzleStore((s) => s.nonogramCleared);
+  const next = useTierNext("nonogram");
   const startNonogram = usePuzzleStore((s) => s.startNonogram);
   useEffect(() => {
     const current = usePuzzleStore.getState().nonogramGame;
-    if (!current || (!current.solved && current.level !== nonogramCleared + 1)) startNonogram();
-  }, [nonogramCleared, startNonogram]);
+    if (needsStart(current, !!current?.solved, next)) startNonogram();
+  }, [next, startNonogram]);
   if (!game) return null;
   return <NonogramLevel game={game} />;
 }
@@ -41,7 +44,8 @@ function NonogramLevel({ game }: { game: NonogramGame }) {
   const doneCols = useMemo(() => Array.from({ length: width }, (_, c) => colDone(game, c)), [game, width]);
   const clueSize = width > 5 ? 13 : 16;
   const lastStars = usePuzzleStore((s) => s.lastStars);
-  const picture = PICTURE_LEVELS[game.level] !== undefined;
+  const tier = game.tier ?? "easy";
+  const picture = pictureAt(game.level, tier) !== undefined;
   // 이미 풀린 판을 다시 열 때는 소리를 내지 않습니다.
   const wasSolved = useRef(game.solved);
   useEffect(() => {
@@ -51,7 +55,7 @@ function NonogramLevel({ game }: { game: NonogramGame }) {
 
   return (
     <Page>
-      <PuzzleHeader title={`레벨 ${game.level}`} subtitle={`노노그램 · ${height}×${width}${picture ? " · 그림" : ""}`} />
+      <PuzzleHeader title={`레벨 ${game.level}`} subtitle={`노노그램 · ${TIER_LABEL[tier]} · ${height}×${width}${picture ? " · 그림" : ""}`} back={{ to: TIER_ROUTE.nonogram, label: "노노그램 화면으로" }} />
 
       {/* 위 단서는 판의 열에, 왼쪽 단서는 판의 행에 맞춰 같은 격자에 둡니다. */}
       <Box sx={{ px: 1.5, pt: 2, display: "grid", gridTemplateColumns: "auto minmax(0, 1fr)", gridTemplateRows: "auto auto", columnGap: 0.75, rowGap: 0.75 }}>

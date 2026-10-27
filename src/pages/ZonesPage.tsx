@@ -1,4 +1,7 @@
 import CloseIcon from "@mui/icons-material/Close";
+import { needsStart, useTierNext } from "../components/tier/useTier";
+import { TIER_ROUTE } from "../components/tier/tierRoutes";
+import { TIER_LABEL } from "../puzzle/core/tier";
 import RestartAltIcon from "@mui/icons-material/RestartAlt";
 import UndoIcon from "@mui/icons-material/Undo";
 import { Box, ToggleButton, ToggleButtonGroup, Typography } from "@mui/material";
@@ -23,7 +26,7 @@ import { ZONE_COLORS, dessert } from "../theme/palette";
 export default function ZonesPage() {
   const daily = useIsDaily();
   const game = usePuzzleStore((s) => (daily ? s.dailyZone : s.zoneGame));
-  const zoneCleared = usePuzzleStore((s) => s.zoneCleared);
+  const next = useTierNext("zones");
   const startZone = usePuzzleStore((s) => s.startZone);
   const updateZone = usePuzzleStore((s) => (daily ? s.updateDailyZone : s.updateZone));
   const startDailyZone = usePuzzleStore((s) => s.startDailyZone);
@@ -39,8 +42,8 @@ export default function ZonesPage() {
       return;
     }
     const current = usePuzzleStore.getState().zoneGame;
-    if (!current || (!current.solved && current.level !== zoneCleared + 1)) startZone();
-  }, [daily, zoneCleared, startZone, startDailyZone]);
+    if (needsStart(current, !!current?.solved, next)) startZone();
+  }, [daily, next, startZone, startDailyZone]);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -67,7 +70,8 @@ export default function ZonesPage() {
     <Page>
       <PuzzleHeader
         title={daily ? "오늘의 퍼즐" : `레벨 ${game.level}`}
-        subtitle={`색깔 구역 · ${size}×${size}`}
+        subtitle={`색깔 구역 · ${daily ? "" : `${TIER_LABEL[game.tier ?? "easy"]} · `}${size}×${size}`}
+        back={daily ? undefined : { to: TIER_ROUTE.zones, label: "색깔 구역 화면으로" }}
         art={<DessertArt id="macaron" size={30} />}
         right={<span aria-label="걸린 시간">{formatTime(game.elapsedSeconds)}</span>}
       />

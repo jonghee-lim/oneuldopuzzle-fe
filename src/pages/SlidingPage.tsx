@@ -1,4 +1,7 @@
 import RestartAltIcon from "@mui/icons-material/RestartAlt";
+import { needsStart, useTierNext } from "../components/tier/useTier";
+import { TIER_ROUTE } from "../components/tier/tierRoutes";
+import { TIER_LABEL } from "../puzzle/core/tier";
 import UndoIcon from "@mui/icons-material/Undo";
 import { Box, Typography } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
@@ -25,7 +28,7 @@ import { radius } from "../theme/shape";
 export default function SlidingPage() {
   const daily = useIsDaily();
   const game = usePuzzleStore((s) => (daily ? s.dailySlide : s.slideGame));
-  const cleared = usePuzzleStore((s) => s.slideCleared);
+  const next = useTierNext("sliding");
   const startSlide = usePuzzleStore((s) => s.startSlide);
   const updateSlide = usePuzzleStore((s) => (daily ? s.updateDailySlide : s.updateSlide));
   const startDailySlide = usePuzzleStore((s) => s.startDailySlide);
@@ -40,8 +43,8 @@ export default function SlidingPage() {
       return;
     }
     const current = usePuzzleStore.getState().slideGame;
-    if (!current || (!current.solved && current.level !== cleared + 1)) startSlide();
-  }, [daily, cleared, startSlide, startDailySlide]);
+    if (needsStart(current, !!current?.solved, next)) startSlide();
+  }, [daily, next, startSlide, startDailySlide]);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -94,7 +97,8 @@ export default function SlidingPage() {
     <Page>
       <PuzzleHeader
         title={daily ? "오늘의 퍼즐" : `레벨 ${game.level}`}
-        subtitle={`슬라이딩 · ${size}×${size}`}
+        subtitle={`슬라이딩 · ${daily ? "" : `${TIER_LABEL[game.tier ?? "easy"]} · `}${size}×${size}`}
+        back={daily ? undefined : { to: TIER_ROUTE.sliding, label: "슬라이딩 화면으로" }}
         art={<DessertArt id="cookie" size={30} />}
         right={<span aria-label="이동 수">{game.moves}수</span>}
       />

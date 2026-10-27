@@ -1,4 +1,5 @@
 // 블록 채우기 생성기: 판을 무작위로 1~4칸 조각으로 나누고, 그 조각들로 채우는 방법이 하나뿐인 판만 씁니다.
+import { tierSeed, type Tier } from "../core/tier.ts";
 import { createRng, seedFrom, shuffle, type Rng } from "../core/rng.ts";
 import { shapeOf, type Shape } from "./rules.ts";
 import { countTilings } from "./solver.ts";
@@ -57,12 +58,11 @@ export function generateBlocks(seed: string, size: number, tries = 3000): BlockP
   throw new Error(`블록 채우기 문제를 만들지 못했습니다: ${seed}`);
 }
 
-export function blockSizeForLevel(level: number): number {
-  if (level <= 5) return 4;
-  if (level <= 20) return 5;
-  return 6;
+/** 난이도마다 판 크기: 쉬움 4×4, 보통 5×5, 어려움 6×6(7×7은 답이 하나인 판을 만들기 어려움) */
+export function blockSizeForLevel(_level: number, tier: Tier = "easy"): number {
+  return tier === "hard" ? 6 : tier === "normal" ? 5 : 4;
 }
 
-export function blocksForLevel(level: number): BlockPuzzle {
-  return generateBlocks(`blocks-${level}`, blockSizeForLevel(level));
+export function blocksForLevel(level: number, tier: Tier = "easy"): BlockPuzzle {
+  return generateBlocks(tierSeed("blocks", tier, level), blockSizeForLevel(level, tier));
 }

@@ -10,6 +10,7 @@ import RecordsPage from "./pages/RecordsPage";
 import SettingsPage from "./pages/SettingsPage";
 import SlidingPage from "./pages/SlidingPage";
 import SudokuPage from "./pages/SudokuPage";
+import TierPage from "./pages/TierPage";
 import ZonesPage from "./pages/ZonesPage";
 
 export default function App() {
@@ -37,6 +38,11 @@ export default function App() {
       <Route path="/records" element={<RecordsPage />} />
       <Route path="/special/nonogram" element={<NonogramPage />} />
       <Route path="/special/escape" element={<EscapePage />} />
+      <Route path="/levels/zones" element={<TierPage puzzle="zones" />} />
+      <Route path="/levels/blocks" element={<TierPage puzzle="blocks" />} />
+      <Route path="/levels/sliding" element={<TierPage puzzle="sliding" />} />
+      <Route path="/levels/nonogram" element={<TierPage puzzle="nonogram" />} />
+      <Route path="/levels/escape" element={<TierPage puzzle="escape" />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

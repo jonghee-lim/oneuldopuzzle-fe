@@ -157,3 +157,21 @@ test("단계 힌트: 마지막 단계는 힌트가 가리키는 칸을 비추고
   const si = slideHint(sp.board, sp.size)!;
   assert.deepEqual(slideHintSteps(sp.board, si)[0].cells, [si]);
 });
+
+test("보통·어려움 판도 힌트만으로 끝까지 풀린다", async () => {
+  const { nonogramForLevel } = await import("../src/puzzle/nonogram/generator.ts");
+  const { escapeForLevel } = await import("../src/puzzle/escape/levels.ts");
+  for (const tier of ["normal", "hard"] as const) {
+    for (const level of [1, 7]) {
+      hintsSolve(newZoneGame(level, zonesForLevel(level, tier)), findZoneHint, applyZoneHint, (x) => x.solved);
+      hintsSolve(newBlockGame(level, blocksForLevel(level, tier)), findBlockHint, applyBlockHint, (x) => x.solved);
+      hintsSolve(newNonogramGame(nonogramForLevel(level, tier), level), findNonogramHint, applyNonogramHint, (x) => x.solved, 600);
+      const e = escapeForLevel(level, tier);
+      assert.equal(hintsSolve(newEscapeGame(e.board), findEscapeHint, applyEscapeHint, (x) => x.escaped).moves, e.minMoves);
+      const p = slideForLevel(level, tier);
+      let board = p.board;
+      for (let n = 0; n < 400 && !isSolved(board); n += 1) board = slideFrom(board, p.size, slideHint(board, p.size)!)!;
+      assert.ok(isSolved(board), `슬라이딩 ${tier} ${level}`);
+    }
+  }
+});

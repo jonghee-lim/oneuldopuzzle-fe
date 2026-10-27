@@ -80,14 +80,18 @@ test("끝없는 레벨 표: 판마다 풀리고 최소 이동 수가 적힌 값�
   }
 });
 
-test("끝없는 레벨: 표가 끝나도 어려운 판을 돌려 가며 낸다", async () => {
-  const { ESCAPE_TABLE } = await import("../src/puzzle/escape/table.ts");
+test("끝없는 레벨: 난이도마다 최소 이동 수 구간 안에서 늘어나고, 표가 끝나도 그 구간의 어려운 쪽을 돌려 낸다", async () => {
   const { escapeForLevel } = await import("../src/puzzle/escape/levels.ts");
-  const n = ESCAPE_TABLE.length;
+  const range = { easy: [3, 10], normal: [11, 18], hard: [19, 99] } as const;
   assert.equal(escapeForLevel(1).minMoves, 3);
-  assert.equal(escapeForLevel(n).board, ESCAPE_TABLE[n - 1][0]);
-  for (const level of [n + 1, n + 60, n + 61, n * 5]) {
-    const { board, minMoves } = escapeForLevel(level);
-    assert.ok(board.length === 36 && minMoves >= ESCAPE_TABLE[Math.max(0, n - 60)][1]);
+  for (const tier of ["easy", "normal", "hard"] as const) {
+    let prev = 0;
+    for (let level = 1; level <= 200; level += 1) {
+      const { board, minMoves } = escapeForLevel(level, tier);
+      assert.equal(board.length, 36);
+      assert.ok(minMoves >= range[tier][0] && minMoves <= range[tier][1], `${tier} 레벨 ${level}: ${minMoves}수`);
+      if (level <= 20) assert.ok(minMoves >= prev, `${tier} 레벨 ${level}`);
+      prev = minMoves;
+    }
   }
 });

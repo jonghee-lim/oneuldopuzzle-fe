@@ -1,10 +1,13 @@
 // 슬라이딩 퍼즐 한 판의 조작
+import type { Tier } from "../core/tier.ts";
 import { popHistory, pushHistory, type History } from "../core/history.ts";
 import type { SlidePuzzle } from "./generator.ts";
 import { isSolved, slideFrom, type SlideBoard } from "./rules.ts";
 
 export interface SlideGame {
   level: number;
+  /** 난이도(없으면 쉬움, 오늘의 퍼즐은 없음) */
+  tier?: Tier;
   puzzle: SlidePuzzle;
   board: SlideBoard;
   moves: number;

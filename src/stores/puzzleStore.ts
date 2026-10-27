@@ -16,6 +16,7 @@ import { newEscapeGame, type EscapeGame } from "../puzzle/escape/game";
 import { nonogramForLevel } from "../puzzle/nonogram/generator";
 import { newNonogramGame, type NonogramGame } from "../puzzle/nonogram/game";
 import { zonesForLevel } from "../puzzle/zones/generator";
+import { DEFAULT_TIER, type Tier, type TierPuzzle } from "../puzzle/core/tier";
 import { newZoneGame, type ZoneGame } from "../puzzle/zones/game";
 
 export interface PuzzleSettings {
@@ -33,7 +34,18 @@ export interface PuzzleSettings {
 /** 점수표 한 줄: 퍼즐 종류별로 푼 수·가장 빠른 시간·합계 시간 */
 export type { PuzzleStat } from "../puzzle/core/record";
 
-export type StatKey = SudokuDifficulty | "zones" | "sliding" | "blocks";
+/** 기록 키: 스도쿠는 난이도, 시간을 재는 세 퍼즐은 쉬움이면 "zones", 다른 난이도는 "zones:normal" */
+export type TimedPuzzle = "zones" | "sliding" | "blocks";
+export type StatKey = SudokuDifficulty | TimedPuzzle | `${TimedPuzzle}:${Tier}`;
+
+export function tierStatKey(puzzle: TimedPuzzle, tier: Tier = "easy"): StatKey {
+  return tier === "easy" ? puzzle : `${puzzle}:${tier}`;
+}
+
+/** 블록 탈출 레벨별 가장 적은 이동 수 키(쉬움은 예전처럼 레벨 번호만) */
+export function escapeBestKey(level: number, tier: Tier = "easy"): string {
+  return tier === "easy" ? String(level) : `${tier}:${level}`;
+}
 
 export interface PuzzleState {
   /** 깬 가장 높은 레벨(0이면 아직 없음) */
@@ -56,22 +68,20 @@ export interface PuzzleState {
   lastRecord: LastRecord | null;
   /** 레벨별 가장 많이 받은 별(키는 collection.starKey) */
   stars: Record<string, number>;
-  /** 색깔 구역 퍼즐 */
-  zoneCleared: number;
+  /** 다섯 퍼즐의 난이도마다 깬 마지막 레벨(2026-10-27, 예전 진행은 쉬움으로 옮김) */
+  tierCleared: Partial<Record<TierPuzzle, Partial<Record<Tier, number>>>>;
+  /** 퍼즐마다 고른 난이도(없으면 쉬움) */
+  tierChosen: Partial<Record<TierPuzzle, Tier>>;
+  /** 난이도를 바꾸느라 잠시 멈춘 판(퍼즐·난이도마다 하나) */
+  tierPaused: Partial<Record<TierPuzzle, Partial<Record<Tier, unknown>>>>;
+  /** 지금 판(고른 난이도의 판) */
   zoneGame: ZoneGame | null;
-  /** 슬라이딩 퍼즐 */
-  slideCleared: number;
   slideGame: SlideGame | null;
-  /** 블록 채우기 */
-  blockCleared: number;
   blockGame: BlockGame | null;
-  /** 노노그램(끝없는 레벨, 2026-10-27) */
-  nonogramCleared: number;
   nonogramGame: NonogramGame | null;
-  /** 블록 탈출(끝없는 레벨, 2026-10-27): 깬 레벨과 레벨별 가장 적은 이동 수 */
-  escapeCleared: number;
   escapeGame: EscapeGame | null;
-  escapeBest: Record<number, number>;
+  /** 블록 탈출 레벨별 가장 적은 이동 수(키는 escapeBestKey) */
+  escapeBest: Record<string, number>;
   /** 남은 힌트 수 */
   hints: number;
   /** 오늘의 퍼즐: 날짜와 그날의 판들(날짜가 바뀌면 새로 만듭니다) */
@@ -92,6 +102,7 @@ export interface PuzzleState {
   startLevel: (level: number) => SudokuGame;
   updateGame: (update: (game: SudokuGame) => SudokuGame) => void;
   updateSettings: (patch: Partial<PuzzleSettings>) => void;
+  chooseTier: (puzzle: TierPuzzle, tier: Tier) => void;
   startZone: () => ZoneGame;
   updateZone: (update: (game: ZoneGame) => ZoneGame) => void;
   startSlide: () => SlideGame;
@@ -128,6 +139,14 @@ function record(state: PuzzleState, key: StatKey, seconds: number, helped: boole
   const prev = state.stats[key];
   return { stats: { ...state.stats, [key]: addRecord(prev, seconds, helped) }, lastRecord: { seconds, prevBest: prev?.bestSeconds } };
 }
+
+/** 다섯 퍼즐: 고른 난이도와 그 난이도의 다음 레벨 */
+export function tierNext(s: Pick<PuzzleState, "tierCleared" | "tierChosen">, puzzle: TierPuzzle): { tier: Tier; level: number } {
+  const tier = s.tierChosen[puzzle] ?? DEFAULT_TIER;
+  return { tier, level: (s.tierCleared[puzzle]?.[tier] ?? 0) + 1 };
+}
+
+const TIER_SLOT = { zones: "zoneGame", sliding: "slideGame", blocks: "blockGame", nonogram: "nonogramGame", escape: "escapeGame" } as const;
 
 /** 난이도를 고른 적이 없으면 쉬움부터 */
 export const DEFAULT_DIFFICULTY: SudokuDifficulty = "easy";
@@ -167,6 +186,41 @@ export const usePuzzleStore = create<PuzzleState>()(
         set({ [slot]: game } as Partial<PuzzleState>);
       }
 
+      type TieredGame = { level: number; tier?: Tier };
+      /** 고른 난이도의 다음 레벨 판을 준비합니다. 다른 난이도로 풀던 판은 버리지 않고 멈춰 둡니다. */
+      function startTiered<G extends TieredGame>(puzzle: TierPuzzle, done: (g: G) => boolean, make: (level: number, tier: Tier) => G): G {
+        const { tier, level } = tierNext(get(), puzzle);
+        const slot = TIER_SLOT[puzzle];
+        const current = get()[slot] as G | null;
+        if (current && (current.tier ?? DEFAULT_TIER) === tier && current.level === level && !done(current)) return current;
+        const paused = { ...(get().tierPaused[puzzle] ?? {}) } as Partial<Record<Tier, G>>;
+        if (current && !done(current)) paused[current.tier ?? DEFAULT_TIER] = current;
+        const kept = paused[tier];
+        delete paused[tier];
+        const game = kept && kept.level === level && !done(kept) ? kept : { ...make(level, tier), tier };
+        set({ [slot]: game, tierPaused: { ...get().tierPaused, [puzzle]: paused } } as Partial<PuzzleState>);
+        return game;
+      }
+      /** 지금 판을 바꾸고, 방금 풀었으면 그 난이도의 깬 레벨과 별·기록을 남깁니다. */
+      function updateTiered<G extends TieredGame>(puzzle: TierPuzzle, done: (g: G) => boolean, update: (g: G) => G, solved: (g: G, tier: Tier) => Partial<PuzzleState>) {
+        const slot = TIER_SLOT[puzzle];
+        const before = get()[slot] as G | null;
+        if (!before) return;
+        const game = update(before);
+        if (game === before) return;
+        if (done(game) && !done(before)) {
+          const tier = game.tier ?? DEFAULT_TIER;
+          const cleared = get().tierCleared[puzzle] ?? {};
+          set({
+            [slot]: game,
+            tierCleared: { ...get().tierCleared, [puzzle]: { ...cleared, [tier]: Math.max(cleared[tier] ?? 0, game.level) } },
+            ...solved(game, tier),
+          } as Partial<PuzzleState>);
+          return;
+        }
+        set({ [slot]: game } as Partial<PuzzleState>);
+      }
+
       return {
       sudokuCleared: {},
       bestSeconds: {},
@@ -178,15 +232,13 @@ export const usePuzzleStore = create<PuzzleState>()(
       lastStars: null,
       lastRecord: null,
       stars: {},
-      zoneCleared: 0,
+      tierCleared: {},
+      tierChosen: {},
+      tierPaused: {},
       zoneGame: null,
-      slideCleared: 0,
       slideGame: null,
-      blockCleared: 0,
       blockGame: null,
-      nonogramCleared: 0,
       nonogramGame: null,
-      escapeCleared: 0,
       escapeGame: null,
       escapeBest: {},
       hints: HINT_START,
@@ -236,132 +288,51 @@ export const usePuzzleStore = create<PuzzleState>()(
       },
       updateSettings: (patch) => set({ settings: { ...get().settings, ...patch } }),
 
-      startZone: () => {
-        const level = get().zoneCleared + 1;
-        const current = get().zoneGame;
-        if (current && current.level === level && !current.solved) return current;
-        const zoneGame = newZoneGame(level, zonesForLevel(level));
-        set({ zoneGame });
-        return zoneGame;
-      },
-      updateZone: (update) => {
-        const before = get().zoneGame;
-        if (!before) return;
-        const zoneGame = update(before);
-        if (zoneGame === before) return;
-        if (zoneGame.solved && !before.solved) {
-          const lines = zoneStars(zoneGame.puzzle.size, zoneGame.elapsedSeconds, !!zoneGame.usedHint);
-          set({
-            zoneGame,
-            zoneCleared: Math.max(get().zoneCleared, zoneGame.level),
-            ...gainStars(get(), starKey.zones(zoneGame.level), lines),
-            ...record(get(), "zones", zoneGame.elapsedSeconds, !!zoneGame.usedHint),
-          });
-          return;
-        }
-        set({ zoneGame });
-      },
-      startSlide: () => {
-        const level = get().slideCleared + 1;
-        const current = get().slideGame;
-        if (current && current.level === level && !current.solved) return current;
-        const slideGame = newSlideGame(level, slideForLevel(level));
-        set({ slideGame });
-        return slideGame;
-      },
-      updateSlide: (update) => {
-        const before = get().slideGame;
-        if (!before) return;
-        const slideGame = update(before);
-        if (slideGame === before) return;
-        if (slideGame.solved && !before.solved) {
-          const lines = slideStars(slideGame.moves, slideGame.puzzle.minMoves, slideGame.elapsedSeconds, !!slideGame.usedHint);
-          set({
-            slideGame,
-            slideCleared: Math.max(get().slideCleared, slideGame.level),
-            ...gainStars(get(), starKey.sliding(slideGame.level), lines),
-            ...record(get(), "sliding", slideGame.elapsedSeconds, !!slideGame.usedHint),
-          });
-          return;
-        }
-        set({ slideGame });
-      },
-      startBlocks: () => {
-        const level = get().blockCleared + 1;
-        const current = get().blockGame;
-        if (current && current.level === level && !current.solved) return current;
-        const blockGame = newBlockGame(level, blocksForLevel(level));
-        set({ blockGame });
-        return blockGame;
-      },
-      updateBlocks: (update) => {
-        const before = get().blockGame;
-        if (!before) return;
-        const blockGame = update(before);
-        if (blockGame === before) return;
-        if (blockGame.solved && !before.solved) {
-          const lines = blockStars(blockGame.puzzle.size, blockGame.elapsedSeconds, !!blockGame.usedHint);
-          set({
-            blockGame,
-            blockCleared: Math.max(get().blockCleared, blockGame.level),
-            ...gainStars(get(), starKey.blocks(blockGame.level), lines),
-            ...record(get(), "blocks", blockGame.elapsedSeconds, !!blockGame.usedHint),
-          });
-          return;
-        }
-        set({ blockGame });
-      },
-      startNonogram: () => {
-        const level = get().nonogramCleared + 1;
-        const current = get().nonogramGame;
-        if (current && current.level === level && !current.solved) return current;
-        const nonogramGame = newNonogramGame(nonogramForLevel(level), level);
-        set({ nonogramGame });
-        return nonogramGame;
-      },
-      updateNonogram: (update) => {
-        const before = get().nonogramGame;
-        if (!before) return;
-        const nonogramGame = update(before);
-        if (nonogramGame === before) return;
-        if (nonogramGame.solved && !before.solved) {
-          const lines = nonogramStars(nonogramGame.mistakes ?? 0, !!nonogramGame.usedHint);
-          set({
-            nonogramGame,
-            nonogramCleared: Math.max(get().nonogramCleared, nonogramGame.level),
-            ...gainStars(get(), starKey.nonogram(nonogramGame.level), lines),
-          });
-          return;
-        }
-        set({ nonogramGame });
-      },
-      startEscape: () => {
-        const level = get().escapeCleared + 1;
-        const current = get().escapeGame;
-        if (current && current.level === level && !current.escaped) return current;
-        const { board, minMoves } = escapeForLevel(level);
-        const escapeGame = newEscapeGame(board, level, minMoves);
-        set({ escapeGame });
-        return escapeGame;
-      },
-      updateEscape: (update) => {
-        const before = get().escapeGame;
-        if (!before) return;
-        const escapeGame = update(before);
-        if (escapeGame === before) return;
-        if (escapeGame.escaped && !before.escaped) {
-          const best = get().escapeBest[escapeGame.level];
-          const lines = escapeStars(escapeGame.moves, escapeGame.minMoves, !!escapeGame.usedHint);
-          set({
-            escapeGame,
-            escapeCleared: Math.max(get().escapeCleared, escapeGame.level),
-            escapeBest: best === undefined || escapeGame.moves < best ? { ...get().escapeBest, [escapeGame.level]: escapeGame.moves } : get().escapeBest,
-            ...gainStars(get(), starKey.escape(escapeGame.level), lines),
-          });
-          return;
-        }
-        set({ escapeGame });
-      },
+      chooseTier: (puzzle, tier) => set({ tierChosen: { ...get().tierChosen, [puzzle]: tier } }),
+      startZone: () => startTiered("zones", (g: ZoneGame) => g.solved, (level, tier) => newZoneGame(level, zonesForLevel(level, tier))),
+      updateZone: (update) =>
+        updateTiered("zones", (g: ZoneGame) => g.solved, update, (g, tier) => {
+          const helped = !!g.usedHint;
+          return {
+            ...gainStars(get(), starKey.zones(g.level, tier), zoneStars(g.puzzle.size, g.elapsedSeconds, helped)),
+            ...record(get(), tierStatKey("zones", tier), g.elapsedSeconds, helped),
+          };
+        }),
+      startSlide: () => startTiered("sliding", (g: SlideGame) => g.solved, (level, tier) => newSlideGame(level, slideForLevel(level, tier))),
+      updateSlide: (update) =>
+        updateTiered("sliding", (g: SlideGame) => g.solved, update, (g, tier) => {
+          const helped = !!g.usedHint;
+          return {
+            ...gainStars(get(), starKey.sliding(g.level, tier), slideStars(g.moves, g.puzzle.minMoves, g.elapsedSeconds, helped)),
+            ...record(get(), tierStatKey("sliding", tier), g.elapsedSeconds, helped),
+          };
+        }),
+      startBlocks: () => startTiered("blocks", (g: BlockGame) => g.solved, (level, tier) => newBlockGame(level, blocksForLevel(level, tier))),
+      updateBlocks: (update) =>
+        updateTiered("blocks", (g: BlockGame) => g.solved, update, (g, tier) => {
+          const helped = !!g.usedHint;
+          return {
+            ...gainStars(get(), starKey.blocks(g.level, tier), blockStars(g.puzzle.size, g.elapsedSeconds, helped)),
+            ...record(get(), tierStatKey("blocks", tier), g.elapsedSeconds, helped),
+          };
+        }),
+      startNonogram: () => startTiered("nonogram", (g: NonogramGame) => g.solved, (level, tier) => newNonogramGame(nonogramForLevel(level, tier), level)),
+      updateNonogram: (update) =>
+        updateTiered("nonogram", (g: NonogramGame) => g.solved, update, (g, tier) => gainStars(get(), starKey.nonogram(g.level, tier), nonogramStars(g.mistakes ?? 0, !!g.usedHint))),
+      startEscape: () =>
+        startTiered("escape", (g: EscapeGame) => g.escaped, (level, tier) => {
+          const { board, minMoves } = escapeForLevel(level, tier);
+          return newEscapeGame(board, level, minMoves);
+        }),
+      updateEscape: (update) =>
+        updateTiered("escape", (g: EscapeGame) => g.escaped, update, (g, tier) => {
+          const key = escapeBestKey(g.level, tier);
+          const best = get().escapeBest[key];
+          return {
+            escapeBest: best === undefined || g.moves < best ? { ...get().escapeBest, [key]: g.moves } : get().escapeBest,
+            ...gainStars(get(), starKey.escape(g.level, tier), escapeStars(g.moves, g.minMoves, !!g.usedHint)),
+          };
+        }),
 
       spendHint: () => {
         if (get().hints <= 0) return false;
@@ -413,10 +384,10 @@ export const usePuzzleStore = create<PuzzleState>()(
     },
     {
       name: "oneuldopuzzle-v1",
-      version: 4,
+      version: 5,
       // 버전 1은 모든 난이도가 레벨 하나를 같이 썼습니다. 깬 레벨은 그때 고른 난이도의 레벨로 옮깁니다.
       migrate: (persisted, version) => {
-        let p = (persisted ?? {}) as Omit<Partial<PuzzleState>, "nonogramCleared"> & { nonogramCleared?: number | number[]; clearedLevel?: number; score?: number; lastScore?: unknown };
+        let p = (persisted ?? {}) as Partial<PuzzleState> & { zoneCleared?: number; slideCleared?: number; blockCleared?: number; escapeCleared?: number; nonogramCleared?: number | number[]; clearedLevel?: number; score?: number; lastScore?: unknown };
         // 버전 1은 모든 난이도가 레벨 하나를 같이 썼습니다. 깬 레벨은 그때 고른 난이도의 레벨로 옮깁니다.
         if (version < 2) {
           const cleared = p.clearedLevel ?? 0;
@@ -454,6 +425,21 @@ export const usePuzzleStore = create<PuzzleState>()(
           }
           p = { ...p, stars, nonogramCleared: streak(oldNonogram), escapeCleared: streak(oldEscape), escapeBest: {} };
         }
+        // 버전 5는 다섯 퍼즐도 난이도마다 레벨(2026-10-27). 예전에 깬 레벨은 쉬움으로 옮깁니다(별·기록 키는 쉬움이 예전 키 그대로).
+        if (version < 5) {
+          const easy = (n: unknown) => (typeof n === "number" && n > 0 ? { easy: n } : {});
+          p = {
+            ...p,
+            tierCleared: { zones: easy(p.zoneCleared), sliding: easy(p.slideCleared), blocks: easy(p.blockCleared), nonogram: easy(p.nonogramCleared), escape: easy(p.escapeCleared) },
+            tierChosen: {},
+            tierPaused: {},
+          };
+          delete p.zoneCleared;
+          delete p.slideCleared;
+          delete p.blockCleared;
+          delete p.nonogramCleared;
+          delete p.escapeCleared;
+        }
         return p as never;
       },
       // 예전 저장본에 없는 설정은 기본값으로 채웁니다.
@@ -469,15 +455,15 @@ export const usePuzzleStore = create<PuzzleState>()(
         chosenDifficulty: s.chosenDifficulty,
         paused: s.paused,
         stats: s.stats,
-        zoneCleared: s.zoneCleared,
+        tierCleared: s.tierCleared,
+        tierChosen: s.tierChosen,
+        tierPaused: Object.fromEntries(
+          Object.entries(s.tierPaused).map(([k, games]) => [k, Object.fromEntries(Object.entries(games ?? {}).map(([t, g]) => [t, { ...(g as object), history: [], selected: null }]))]),
+        ),
         zoneGame: s.zoneGame ? { ...s.zoneGame, history: [] } : null,
-        slideCleared: s.slideCleared,
         slideGame: s.slideGame ? { ...s.slideGame, history: [] } : null,
-        blockCleared: s.blockCleared,
         blockGame: s.blockGame ? { ...s.blockGame, history: [] } : null,
-        nonogramCleared: s.nonogramCleared,
         nonogramGame: s.nonogramGame ? { ...s.nonogramGame, history: [] } : null,
-        escapeCleared: s.escapeCleared,
         escapeGame: s.escapeGame ? { ...s.escapeGame, history: [], selected: null } : null,
         escapeBest: s.escapeBest,
         stars: s.stars,

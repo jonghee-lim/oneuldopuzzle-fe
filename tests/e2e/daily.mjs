@@ -89,7 +89,7 @@ assert.equal(end.dailyDone.length, 3);
 assert.equal(end.dailyDays.length, 1);
 // 오늘의 퍼즐은 레벨 진행과 따로
 assert.deepEqual(end.sudokuCleared ?? {}, {});
-assert.equal(end.zoneCleared ?? 0, 0);
+assert.deepEqual(end.tierCleared ?? {}, {});
 
 await page.getByRole("button", { name: "처음 화면" }).tap();
 await page.getByText("오늘 몫을 다 풀었어요. 결과를 보내 견줘 보세요!").waitFor();

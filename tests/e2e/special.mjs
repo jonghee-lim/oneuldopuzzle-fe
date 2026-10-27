@@ -18,11 +18,17 @@ const browser = await chromium.launch(process.env.CHROME_PATH ? { executablePath
 const page = await browser.newPage({ ...devices["iPhone 13"] });
 const errors = [];
 page.on("pageerror", (e) => errors.push(String(e)));
+// 첫 화면 카드 → 난이도 고르는 화면(2026-10-27) → 시작하기
+async function openFromHome(name) {
+  await page.getByRole("navigation", { name: "퍼즐 고르기" }).getByRole("link", { name }).tap();
+  await page.getByRole("heading", { name: /^레벨 \d+$/ }).waitFor();
+  await page.getByRole("button", { name: /^(시작하기|이어 하기)$/ }).tap();
+}
 
 // 노노그램
 await page.goto(BASE);
 if (shots) await page.screenshot({ path: `${shots}/s0-home.png`, fullPage: true });
-await page.getByRole("navigation", { name: "퍼즐 고르기" }).getByRole("link", { name: /노노그램/ }).tap();
+await openFromHome(/노노그램/);
 await page.getByRole("grid", { name: /노노그램 판/ }).waitFor();
 const grid = pictureGrid(nonogramForLevel(1));
 const cells = page.getByRole("gridcell");
@@ -40,7 +46,7 @@ if (shots) await page.screenshot({ path: `${shots}/s2-nonogram10.png` });
 
 // 블록 탈출
 await page.goto(BASE);
-await page.getByRole("navigation", { name: "퍼즐 고르기" }).getByRole("link", { name: /블록 탈출/ }).tap();
+await openFromHome(/블록 탈출/);
 await page.getByRole("grid", { name: "블록 탈출 판" }).waitFor();
 const solved = solveEscape(escapeForLevel(1).board);
 assert.equal(solved.minMoves, escapeForLevel(1).minMoves);
@@ -82,7 +88,7 @@ await page.getByRole("heading", { name: "레벨 2" }).waitFor();
 
 // 색깔 구역: 홈 타일에서 들어가 답 자리를 눌러 완성하고 다음 레벨로
 await page.goto(BASE);
-await page.getByRole("navigation", { name: "퍼즐 고르기" }).getByRole("link", { name: /색깔 구역/ }).tap();
+await openFromHome(/색깔 구역/);
 await page.getByRole("grid", { name: /색깔 구역 판/ }).waitFor();
 const zone = await page.evaluate(() => JSON.parse(localStorage.getItem("oneuldopuzzle-v1")).state.zoneGame);
 const zc = page.getByRole("gridcell");
@@ -101,7 +107,7 @@ await page.getByRole("heading", { name: "레벨 2" }).waitFor();
 
 // 슬라이딩: 최소 수 표를 따라 한 칸씩 줄여 가며 누르면 최소 수로 완성
 await page.goto(BASE);
-await page.getByRole("navigation", { name: "퍼즐 고르기" }).getByRole("link", { name: /슬라이딩/ }).tap();
+await openFromHome(/슬라이딩/);
 await page.getByRole("grid", { name: /슬라이딩 판/ }).waitFor();
 const slide = await page.evaluate(() => JSON.parse(localStorage.getItem("oneuldopuzzle-v1")).state.slideGame);
 let board = slide.board;
@@ -131,7 +137,7 @@ if (shots) await page.screenshot({ path: `${shots}/s10-sliding-clear.png` });
 
 // 블록 채우기: 블록을 고르고 답의 기준 칸을 누르기, 엉뚱한 자리는 막힘 안내
 await page.goto(BASE);
-await page.getByRole("navigation", { name: "퍼즐 고르기" }).getByRole("link", { name: /블록 채우기/ }).tap();
+await openFromHome(/블록 채우기/);
 await page.getByRole("grid", { name: /블록 채우기 판/ }).waitFor();
 const bg = await page.evaluate(() => JSON.parse(localStorage.getItem("oneuldopuzzle-v1")).state.blockGame);
 const bc = page.getByRole("gridcell");
@@ -148,11 +154,7 @@ if (shots) await page.screenshot({ path: `${shots}/s12-blocks-clear.png` });
 // 기록표: 스페셜·보너스 기록과 별
 await page.goto(`${BASE}/records`);
 const st = await page.evaluate(() => JSON.parse(localStorage.getItem("oneuldopuzzle-v1")).state);
-assert.equal(st.zoneCleared, 1);
-assert.equal(st.slideCleared, 1);
-assert.equal(st.blockCleared, 1);
-assert.equal(st.nonogramCleared, 1);
-assert.equal(st.escapeCleared, 1);
+for (const p of ["zones", "sliding", "blocks", "nonogram", "escape"]) assert.deepEqual(st.tierCleared[p], { easy: 1 }, p);
 assert.ok(st.escapeBest[1] >= escapeForLevel(1).minMoves);
 // 다음 레벨 판은 이어 하기로 남는다
 assert.equal(st.nonogramGame.level, 2);
@@ -166,8 +168,37 @@ await page.goto(BASE);
 if (shots) await page.screenshot({ path: `${shots}/s8-home-after.png`, fullPage: true });
 await page.getByRole("navigation", { name: "퍼즐 고르기" }).getByRole("link", { name: /블록 탈출.*이어 하기/ }).waitFor();
 
+// 난이도: 색깔 구역을 '보통'으로 바꾸면 7×7 레벨 1, 쉬움은 레벨 2를 그대로 기억한다
+await page.getByRole("navigation", { name: "퍼즐 고르기" }).getByRole("link", { name: /색깔 구역/ }).tap();
+await page.getByRole("heading", { name: "레벨 2" }).waitFor();
+await page.getByRole("button", { name: "보통", exact: true }).tap();
+await page.getByRole("heading", { name: "레벨 1" }).waitFor();
+if (shots) await page.screenshot({ path: `${shots}/s13-tier.png` });
+await page.getByRole("button", { name: "시작하기" }).tap();
+await page.getByRole("grid", { name: /색깔 구역 판/ }).waitFor();
+await page.getByText("색깔 구역 · 보통 · 7×7").waitFor();
+const normalZone = await page.evaluate(() => JSON.parse(localStorage.getItem("oneuldopuzzle-v1")).state.zoneGame);
+assert.equal(normalZone.tier, "normal");
+assert.equal(normalZone.puzzle.size, 7);
+// 한 칸 놓고 쉬움으로 돌아갔다 오면 보통 판은 이어 하기
+await page.getByRole("gridcell").nth(normalZone.puzzle.solution[0]).tap();
+await page.getByRole("button", { name: "색깔 구역 화면으로" }).tap();
+await page.getByRole("button", { name: "이어 하기" }).waitFor();
+await page.getByRole("button", { name: "쉬움", exact: true }).tap();
+await page.getByRole("heading", { name: "레벨 2" }).waitFor();
+await page.getByRole("button", { name: "시작하기" }).tap();
+await page.getByText("색깔 구역 · 쉬움 · 5×5").waitFor();
+await page.getByRole("button", { name: "색깔 구역 화면으로" }).tap();
+await page.getByRole("button", { name: "보통", exact: true }).tap();
+await page.getByRole("button", { name: "이어 하기" }).tap();
+await page.getByText("색깔 구역 · 보통 · 7×7").waitFor();
+const resumed = await page.evaluate(() => JSON.parse(localStorage.getItem("oneuldopuzzle-v1")).state.zoneGame);
+assert.equal(resumed.tier, "normal");
+assert.equal(resumed.cells.filter((v) => v === 2).length, 1);
+
 // 예전 저장본(버전 2, 점수)은 깬 레벨마다 별 1개로 옮기고(버전 3),
-// 노노그램·블록 탈출 단계는 1단계부터 이어서 푼 만큼을 깬 레벨로, 단계 별은 다른 이름으로 남긴다(버전 4)
+// 노노그램·블록 탈출 단계는 1단계부터 이어서 푼 만큼을 깬 레벨로, 단계 별은 다른 이름으로 남긴다(버전 4),
+// 다섯 퍼즐의 깬 레벨은 '쉬움'으로 옮긴다(버전 5)
 await page.evaluate(() =>
   localStorage.setItem(
     "oneuldopuzzle-v1",
@@ -177,10 +208,10 @@ await page.evaluate(() =>
 await page.goto(`${BASE}/records`);
 await page.getByRole("heading", { name: "기록표" }).waitFor();
 const migrated = await page.evaluate(() => JSON.parse(localStorage.getItem("oneuldopuzzle-v1")));
-assert.equal(migrated.version, 4);
+assert.equal(migrated.version, 5);
 assert.deepEqual(migrated.state.stars, { "sudoku:easy:1": 1, "sudoku:easy:2": 1, "zones:1": 1, "nonogram-old:0": 1, "escape-old:1": 1 });
-assert.equal(migrated.state.nonogramCleared, 1);
-assert.equal(migrated.state.escapeCleared, 0);
+assert.deepEqual(migrated.state.tierCleared, { zones: { easy: 1 }, sliding: {}, blocks: {}, nonogram: { easy: 1 }, escape: {} });
+assert.equal(migrated.state.zoneCleared, undefined);
 assert.equal(migrated.state.score, undefined);
 
 assert.deepEqual(errors, []);

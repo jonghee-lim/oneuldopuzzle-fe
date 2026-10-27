@@ -1,5 +1,6 @@
 // 색깔 구역 퍼즐 생성기: 디저트 자리를 먼저 정하고 그 자리에서 구역을 키운 뒤,
 // 답이 정확히 하나이고 찍지 않고 풀리는 판만 내보냅니다(설계서: 틀린 문제는 하나도 내보내지 않는다).
+import { tierSeed, type Tier } from "../core/tier.ts";
 import { createRng, seedFrom, shuffle, type Rng } from "../core/rng.ts";
 import type { ZonePuzzle } from "./rules.ts";
 import { logicGrade, solveZones } from "./solver.ts";
@@ -124,15 +125,14 @@ export function generateZones(seed: string, size: number, minGrade = 1, tries = 
   throw new Error(`색깔 구역 퍼즐을 만들지 못했습니다: ${seed}`);
 }
 
-/** 레벨이 오를수록 판이 커집니다. */
-export function zoneSizeForLevel(level: number): number {
-  if (level <= 3) return 5;
-  if (level <= 10) return 6;
-  if (level <= 30) return 7;
-  return 8;
+/** 난이도마다 판 크기: 쉬움 5×5(처음 세 판)·6×6, 보통 7×7, 어려움 8×8 */
+export function zoneSizeForLevel(level: number, tier: Tier = "easy"): number {
+  if (tier === "hard") return 8;
+  if (tier === "normal") return 7;
+  return level <= 3 ? 5 : 6;
 }
 
-export function zonesForLevel(level: number): ZonePuzzle {
-  // 레벨 4부터는 '몰린 자리' 추론이 한 번은 필요한 판만 씁니다(너무 쉬우면 재미가 없습니다).
-  return generateZones(`zones-${level}`, zoneSizeForLevel(level), level <= 3 ? 1 : 2);
+export function zonesForLevel(level: number, tier: Tier = "easy"): ZonePuzzle {
+  // 쉬움 처음 세 판 말고는 '몰린 자리' 추론이 한 번은 필요한 판만 씁니다(너무 쉬우면 재미가 없습니다).
+  return generateZones(tierSeed("zones", tier, level), zoneSizeForLevel(level, tier), tier === "easy" && level <= 3 ? 1 : 2);
 }

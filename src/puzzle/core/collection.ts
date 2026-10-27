@@ -4,14 +4,17 @@ export function totalStarsOf(stars: Readonly<Record<string, number>>): number {
   return Object.values(stars).reduce((a, b) => a + b, 0);
 }
 
-/** 별 기록 키: 퍼즐과 레벨(스도쿠는 난이도까지) */
+/** 레벨 키: 쉬움은 예전 키("zones:3") 그대로, 다른 난이도는 "zones:normal:3" */
+const tiered = (puzzle: string) => (level: number, tier: string = "easy") => (tier === "easy" ? `${puzzle}:${level}` : `${puzzle}:${tier}:${level}`);
+
+/** 별 기록 키: 퍼즐과 레벨(스도쿠·다섯 퍼즐은 난이도까지) */
 export const starKey = {
   sudoku: (difficulty: string, level: number) => `sudoku:${difficulty}:${level}`,
-  zones: (level: number) => `zones:${level}`,
-  blocks: (level: number) => `blocks:${level}`,
-  sliding: (level: number) => `sliding:${level}`,
-  nonogram: (stage: number) => `nonogram:${stage}`,
-  escape: (stage: number) => `escape:${stage}`,
+  zones: tiered("zones"),
+  blocks: tiered("blocks"),
+  sliding: tiered("sliding"),
+  nonogram: tiered("nonogram"),
+  escape: tiered("escape"),
 };
 
 /** 더 많이 받았을 때만 바꿉니다. */
