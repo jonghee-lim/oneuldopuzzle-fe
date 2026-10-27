@@ -35,6 +35,12 @@ for (const width of [320, 360]) {
         })
         .map((e) => `${e.tagName}:${(e.getAttribute("aria-label") || e.textContent || "").trim().slice(0, 20)}`);
       if (window.innerWidth !== W) out.push(`화면 너비 ${window.innerWidth}`);
+      // 판은 정사각형이고 칸 높이가 모두 같아야 합니다(iOS에서 줄마다 칸 높이가 달라진 신고, 2026-10-27).
+      for (const grid of document.querySelectorAll("[role=grid]")) {
+        const b = grid.getBoundingClientRect();
+        const hs = [...grid.querySelectorAll("[role=gridcell]")].map((c) => c.getBoundingClientRect().height);
+        if (Math.abs(b.width - b.height) > 1.5 || Math.max(...hs) - Math.min(...hs) > 1.5) out.push(`판 모양 ${Math.round(b.width)}×${Math.round(b.height)}`);
+      }
       return out;
     }, width);
     if (found.length) problems.push(`${width}px ${where}: ${found.slice(0, 5).join(", ")}`);
