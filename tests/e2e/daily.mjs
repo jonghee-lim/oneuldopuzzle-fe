@@ -11,6 +11,14 @@ const browser = await chromium.launch(process.env.CHROME_PATH ? { executablePath
 const page = await browser.newPage({ ...devices["iPhone 13"] });
 const errors = [];
 page.on("pageerror", (e) => errors.push(String(e)));
+// 공유 창은 브라우저마다 달라서, 보낸 내용만 받아 둡니다.
+await page.addInitScript(() => {
+  window.__shared = [];
+  navigator.canShare = () => true;
+  navigator.share = async (data) => {
+    window.__shared.push({ text: data.text, files: (data.files ?? []).map((f) => `${f.name}:${f.type}:${f.size}`) });
+  };
+});
 const state = () => page.evaluate(() => JSON.parse(localStorage.getItem("oneuldopuzzle-v1") ?? "{}").state ?? {});
 
 await page.goto(BASE);
@@ -62,6 +70,20 @@ await page.getByRole("heading", { name: "오늘의 퍼즐 모두 완성!" }).wai
 assert.match(await page.getByRole("dialog").innerText(), /힌트 \+3개 · 연속 1일/);
 if (shots) await page.screenshot({ path: `${shots}/d3-all-clear.png` });
 
+// 결과 공유: 답이 안 보이는 카드와 글을 보낸다(힌트를 썼으니 노란 칸)
+await page.getByRole("button", { name: "결과 공유하기" }).tap();
+await page.getByRole("heading", { name: "오늘의 결과" }).waitFor();
+await page.getByRole("img", { name: /오늘Do퍼즐 #\d+/ }).waitFor();
+await page.waitForTimeout(300);
+if (shots) await page.screenshot({ path: `${shots}/d3b-share.png` });
+await page.getByRole("button", { name: "카톡 등으로 보내기" }).tap();
+await page.getByRole("heading", { name: "오늘의 결과" }).waitFor({ state: "detached" });
+const shared = await page.evaluate(() => window.__shared);
+assert.equal(shared.length, 1);
+assert.match(shared[0].text, /^오늘Do퍼즐 #\d+ \(\d+월 \d+일\)\n🟨🟨🟨 3\/3 · \d+:\d\d\n/);
+assert.match(shared[0].text, /🔥 연속 1일/);
+assert.match(shared[0].files[0] ?? "", /^oneuldopuzzle-\d{4}-\d\d-\d\d\.png:image\/png:\d+$/);
+
 const end = await state();
 assert.equal(end.dailyDone.length, 3);
 assert.equal(end.dailyDays.length, 1);
@@ -70,8 +92,9 @@ assert.deepEqual(end.sudokuCleared ?? {}, {});
 assert.equal(end.zoneCleared ?? 0, 0);
 
 await page.getByRole("button", { name: "처음 화면" }).tap();
-await page.getByText("오늘 몫을 다 풀었어요. 내일 또 만나요!").waitFor();
+await page.getByText("오늘 몫을 다 풀었어요. 결과를 보내 견줘 보세요!").waitFor();
 await page.getByRole("img", { name: "연속 1일" }).waitFor();
+await page.getByRole("region", { name: /오늘의 퍼즐/ }).getByRole("button", { name: "결과 공유하기" }).waitFor();
 if (shots) await page.screenshot({ path: `${shots}/d4-home-done.png`, fullPage: true });
 
 assert.deepEqual(errors, []);

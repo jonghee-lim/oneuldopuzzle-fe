@@ -1,10 +1,12 @@
+import { createElement } from "react";
 import { useNavigate } from "react-router-dom";
 import { dailyKinds, streakOf } from "../../puzzle/core/daily";
 import { formatTime } from "../../puzzle/sudoku/game";
 import { usePuzzleStore } from "../../stores/puzzleStore";
 import { DAILY_ROUTE } from "./daily";
+import DailyShare from "./DailyShare";
 
-/** 오늘의 퍼즐 완성 창 문구와 '다음 오늘의 퍼즐' 버튼 */
+/** 오늘의 퍼즐 완성 창 문구와 '다음 오늘의 퍼즐' 버튼, 세 판을 다 풀면 결과 공유 */
 export function useDailyClear(seconds: number) {
   const navigate = useNavigate();
   const date = usePuzzleStore((s) => s.dailyDate);
@@ -19,5 +21,6 @@ export function useDailyClear(seconds: number) {
     detail: `걸린 시간 ${formatTime(seconds)} · 힌트 +${reward}개${allDone && date ? ` · 연속 ${streakOf(days, date)}일` : ""}`,
     nextLabel: next ? `다음 오늘의 퍼즐 (${done.length}/${kinds.length})` : undefined,
     onNext: next ? () => navigate(DAILY_ROUTE[next], { replace: true }) : undefined,
+    share: allDone ? createElement(DailyShare, { variant: "contained" }) : undefined,
   };
 }
