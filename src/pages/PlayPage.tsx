@@ -28,6 +28,7 @@ import ClearDialog from "../components/puzzle/ClearDialog";
 import { useHint } from "../components/puzzle/useHint";
 import { flash, popIn } from "../theme/motion";
 import { dessert } from "../theme/palette";
+import { TECHNIQUE_NAME } from "../puzzle/sudoku/techniques";
 
 const HINT_REASON = {
   only: "이 칸에는 이 숫자밖에 들어갈 수 없어요.",
@@ -217,7 +218,7 @@ export default function PlayPage() {
             () => findHint(game),
             (h) => sudokuHintSteps(game, h),
             (h) => act((g) => applyHint(g, h)),
-            (h) => (h.kind === "wrong" ? `${cellName(h.index)} 숫자가 틀려서 지웠어요.` : `${cellName(h.index)}에 ${h.digit}: ${HINT_REASON[h.reason]}`),
+            (h) => (h.kind === "wrong" ? `${cellName(h.index)} 숫자가 틀려서 지웠어요.` : `${cellName(h.index)}에 ${h.digit}: ${h.reason === "technique" ? `'${TECHNIQUE_NAME[h.via.technique]}' 기술로 후보를 지워 찾았어요.` : HINT_REASON[h.reason]}`),
           ),
         )}
         <ToolButton label="되돌리기" onClick={() => act(undo)} icon={<UndoIcon sx={{ fontSize: 18 }} />} />

@@ -3,6 +3,7 @@
 import { createRng, seedFrom, shuffle, type Rng } from "../core/rng.ts";
 import { checkSudoku } from "./checker.ts";
 import { solveWithSingles } from "./logic.ts";
+import { rateSudoku } from "./techniques.ts";
 import { CELLS, type SudokuGrid } from "./rules.ts";
 import { solve } from "./solver.ts";
 
@@ -15,21 +16,35 @@ export const DIFFICULTY_LABEL: Record<SudokuDifficulty, string> = {
   expert: "아주 어려움",
 };
 
+/** 난이도마다 필요한 풀이 기술(고르는 화면에 보여 줌, 2026-10-27) */
+export const DIFFICULTY_SKILL: Record<SudokuDifficulty, string> = {
+  easy: "단서가 많아요. 칸마다 들어갈 숫자 하나를 찾아요.",
+  normal: "줄·상자에서 숫자가 갈 자리를 찾아요.",
+  hard: "메모를 켜고 '한 줄 몰림'·'짝 숫자'로 후보를 지워야 풀려요.",
+  expert: "'X날개'·'XY날개' 같은 고급 기술이 꼭 필요해요.",
+};
+
 interface DifficultyRule {
   /** 이 개수까지 지우기를 시도합니다(답이 하나인 동안만). */
   targetClues: number;
-  /** 사람이 단서 찾기만으로 풀 수 있어야 하는지 */
-  singlesOnly: boolean;
-  /** 단서 찾기만으로 풀리면 안 되는지(더 깊은 추론이 필요한 문제) */
-  needsDeeper: boolean;
+  /**
+   * 푸는 데 필요한 기술 단계(techniques.ts, 2026-10-27): 1 단서 찾기 · 2 한 줄 몰림·짝 숫자 · 3 X날개 같은 고급 기술.
+   * 그 단계까지의 기술만으로 풀려야 하고(찍지 않음), 2·3은 그 단계 기술이 꼭 한 번은 필요해야 합니다.
+   */
+  grade: 1 | 2 | 3;
 }
 
 const RULES: Record<SudokuDifficulty, DifficultyRule> = {
-  easy: { targetClues: 40, singlesOnly: true, needsDeeper: false },
-  normal: { targetClues: 32, singlesOnly: true, needsDeeper: false },
-  hard: { targetClues: 26, singlesOnly: false, needsDeeper: false },
-  expert: { targetClues: 22, singlesOnly: false, needsDeeper: true },
+  easy: { targetClues: 40, grade: 1 },
+  normal: { targetClues: 32, grade: 1 },
+  hard: { targetClues: 24, grade: 2 },
+  expert: { targetClues: 22, grade: 3 },
 };
+
+/** 단계 1은 예전 검사(solveWithSingles)를 그대로 써서 쉬움·보통 문제가 바뀌지 않게 합니다. */
+function solvableAt(puzzle: SudokuGrid, grade: number): boolean {
+  return grade === 1 ? solveWithSingles(puzzle).solved : rateSudoku(puzzle, grade).solved;
+}
 
 export interface SudokuPuzzle {
   /** 문제를 다시 만들 수 있는 씨앗 문자열 */
@@ -62,8 +77,7 @@ function carve(solution: SudokuGrid, rule: DifficultyRule, rng: Rng): SudokuGrid
     puzzle[mirror] = 0;
     const removed = i === mirror ? 1 : 2;
     const unique = solve(puzzle, 2).count === 1;
-    const humanOk = !rule.singlesOnly || solveWithSingles(puzzle).solved;
-    if (unique && humanOk) {
+    if (unique && solvableAt(puzzle, rule.grade)) {
       clues -= removed;
     } else {
       puzzle[i] = saved[0];
@@ -74,10 +88,7 @@ function carve(solution: SudokuGrid, rule: DifficultyRule, rng: Rng): SudokuGrid
 }
 
 function fits(puzzle: SudokuGrid, rule: DifficultyRule): boolean {
-  const human = solveWithSingles(puzzle);
-  if (rule.singlesOnly && !human.solved) return false;
-  if (rule.needsDeeper && human.solved) return false;
-  return true;
+  return rule.grade === 1 || rateSudoku(puzzle, rule.grade).grade === rule.grade;
 }
 
 /** 씨앗 문자열로 문제를 만듭니다. 같은 씨앗이면 언제나 같은 문제입니다. */
@@ -85,10 +96,10 @@ export function generateSudoku(seed: string, difficulty: SudokuDifficulty): Sudo
   const rule = RULES[difficulty];
   const rng = createRng(seedFrom(`${seed}:${difficulty}`));
   // 난이도 조건에 맞는 문제가 나올 때까지 다시 만듭니다. 아주 어려움도 보통 몇 번 안에 나옵니다.
-  for (let attempt = 0; attempt < 60; attempt += 1) {
+  for (let attempt = 0; attempt < 300; attempt += 1) {
     const solution = randomSolution(rng);
     const puzzle = carve(solution, rule, rng);
-    if (!fits(puzzle, rule) && attempt < 59) continue;
+    if (!fits(puzzle, rule) && attempt < 299) continue;
     const check = checkSudoku(puzzle, solution);
     if (!check.ok) continue;
     return { id: seed, difficulty, puzzle, solution };

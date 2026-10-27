@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { checkSudoku } from "../src/puzzle/sudoku/checker.ts";
 import { difficultyForLevel, generateSudoku, puzzleForLevel } from "../src/puzzle/sudoku/generator.ts";
 import { solveWithSingles } from "../src/puzzle/sudoku/logic.ts";
+import { TECHNIQUE_GRADE, rateSudoku, solveSteps, type Technique } from "../src/puzzle/sudoku/techniques.ts";
 import { findConflicts, formatGrid, parseGrid } from "../src/puzzle/sudoku/rules.ts";
 
 // 잘 알려진 답이 하나인 문제
@@ -59,12 +60,37 @@ test("생성기: 모든 난이도에서 답이 하나이고 처음 숫자가 답
   }
 });
 
-test("생성기: 쉬움·보통은 단서 찾기만으로 풀리고, 아주 어려움은 그렇지 않다", () => {
+test("생성기: 쉬움·보통은 단서 찾기만으로, 어려움은 한 줄 몰림·짝 숫자가, 아주 어려움은 고급 기술이 꼭 필요하고 모두 찍지 않고 풀린다", () => {
   for (let n = 0; n < 5; n += 1) {
     assert.equal(solveWithSingles(generateSudoku(`s-${n}`, "easy").puzzle).solved, true);
     assert.equal(solveWithSingles(generateSudoku(`s-${n}`, "normal").puzzle).solved, true);
-    assert.equal(solveWithSingles(generateSudoku(`s-${n}`, "expert").puzzle).solved, false);
+    const hard = rateSudoku(generateSudoku(`s-${n}`, "hard").puzzle);
+    assert.deepEqual([hard.solved, hard.grade], [true, 2], `hard ${n}`);
+    const expert = rateSudoku(generateSudoku(`s-${n}`, "expert").puzzle);
+    assert.deepEqual([expert.solved, expert.grade], [true, 3], `expert ${n}`);
   }
+});
+
+test("풀이 기술: 넣는 숫자는 답과 같고, 지우는 후보는 답이 아니다(여러 판에서 모든 기술이 한 번씩은 나온다)", () => {
+  const seen = new Set<Technique>();
+  for (let n = 0; n < 30; n += 1) {
+    const p = generateSudoku(`tech-${n}`, n % 2 ? "expert" : "hard");
+    const { solved, steps } = solveSteps(p.puzzle);
+    assert.ok(solved);
+    for (const step of steps) {
+      seen.add(step.technique);
+      if (step.place) assert.equal(step.place.digit, p.solution[step.place.index], step.technique);
+      for (const e of step.eliminate) assert.notEqual(e.digit, p.solution[e.index], `${step.technique}가 답을 지움`);
+    }
+  }
+  for (const t of ["nakedSingle", "hiddenSingle", "pointing", "claiming", "nakedPair", "hiddenPair", "xWing"] as Technique[]) assert.ok(seen.has(t), `${t}가 나와야 함`);
+  assert.ok([...seen].some((t) => TECHNIQUE_GRADE[t] === 3));
+});
+
+test("풀이 기술: 단계를 낮추면 고급 기술이 필요한 판은 못 푼다", () => {
+  const p = generateSudoku("tech-cap", "expert");
+  assert.equal(rateSudoku(p.puzzle, 2).solved, false);
+  assert.equal(rateSudoku(p.puzzle, 3).solved, true);
 });
 
 test("레벨 난이도 표", () => {
