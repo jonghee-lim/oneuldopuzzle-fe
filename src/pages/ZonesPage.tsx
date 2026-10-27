@@ -12,23 +12,35 @@ import PuzzleBoard from "../components/puzzle/PuzzleBoard";
 import ToolButton from "../components/puzzle/ToolButton";
 import { cue } from "../platform/feedback";
 import { formatTime } from "../puzzle/sudoku/game";
-import { placedOf, restartZone, setZoneTool, tapZoneCell, tickZone, undoZone, zoneGameConflicts, type ZoneGame, type ZoneTool } from "../puzzle/zones/game";
+import { applyZoneHint, findZoneHint, placedOf, restartZone, setZoneTool, tapZoneCell, tickZone, undoZone, zoneGameConflicts, type ZoneGame, type ZoneTool } from "../puzzle/zones/game";
 import { usePuzzleStore } from "../stores/puzzleStore";
+import { useIsDaily } from "../components/daily/daily";
+import { useDailyClear } from "../components/daily/useDailyClear";
+import { useHint } from "../components/puzzle/useHint";
 import { ZONE_COLORS, dessert } from "../theme/palette";
 
 /** 색깔 구역 퍼즐(설계서 보너스): 줄·칸줄·색깔 구역마다 마카롱 하나, 서로 붙지 않게 */
 export default function ZonesPage() {
-  const game = usePuzzleStore((s) => s.zoneGame);
+  const daily = useIsDaily();
+  const game = usePuzzleStore((s) => (daily ? s.dailyZone : s.zoneGame));
   const zoneCleared = usePuzzleStore((s) => s.zoneCleared);
   const startZone = usePuzzleStore((s) => s.startZone);
-  const updateZone = usePuzzleStore((s) => s.updateZone);
+  const updateZone = usePuzzleStore((s) => (daily ? s.updateDailyZone : s.updateZone));
+  const startDailyZone = usePuzzleStore((s) => s.startDailyZone);
+  const read = () => (daily ? usePuzzleStore.getState().dailyZone : usePuzzleStore.getState().zoneGame);
+  const hint = useHint();
+  const dailyClear = useDailyClear(game?.elapsedSeconds ?? 0);
   const lastScore = usePuzzleStore((s) => s.lastScore);
   const [confirm, setConfirm] = useState(false);
 
   useEffect(() => {
+    if (daily) {
+      startDailyZone();
+      return;
+    }
     const current = usePuzzleStore.getState().zoneGame;
     if (!current || (!current.solved && current.level !== zoneCleared + 1)) startZone();
-  }, [zoneCleared, startZone]);
+  }, [daily, zoneCleared, startZone, startDailyZone]);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -44,7 +56,7 @@ export default function ZonesPage() {
 
   const act = (update: (g: ZoneGame) => ZoneGame, index: number) => {
     updateZone(update);
-    const after = usePuzzleStore.getState().zoneGame;
+    const after = read();
     if (!after) return;
     if (after.solved) cue("clear");
     else if (after.cells[index] === 2) cue(zoneGameConflicts(after).has(index) ? "wrong" : "place");
@@ -54,7 +66,7 @@ export default function ZonesPage() {
   return (
     <Page>
       <PuzzleHeader
-        title={`레벨 ${game.level}`}
+        title={daily ? "오늘의 퍼즐" : `레벨 ${game.level}`}
         subtitle={`색깔 구역 · ${size}×${size}`}
         art={<DessertArt id="macaron" size={30} />}
         right={<span aria-label="걸린 시간">{formatTime(game.elapsedSeconds)}</span>}
@@ -102,6 +114,13 @@ export default function ZonesPage() {
       <Box sx={{ px: 1.5, pt: 1, display: "flex", gap: 1 }}>
         <ToolButton label="다시 하기" onClick={() => setConfirm(true)} icon={<RestartAltIcon sx={{ fontSize: 18 }} />} />
         <Box sx={{ flex: 1 }} />
+        {hint.button(() =>
+          hint.give(
+            () => findZoneHint(game),
+            (h) => act((g) => applyZoneHint(g, h), h.index),
+            (h) => `${Math.floor(h.index / size) + 1}행 ${(h.index % size) + 1}열 ${h.remove ? "마카롱은 자리가 아니라서 뺐어요." : "에 마카롱을 놓았어요."}`,
+          ),
+        )}
         <ToolButton label="되돌리기" onClick={() => updateZone(undoZone)} icon={<UndoIcon sx={{ fontSize: 18 }} />} />
       </Box>
       <Box sx={{ px: 1.5, pt: 2, mt: "auto" }}>
@@ -134,12 +153,13 @@ export default function ZonesPage() {
       <ClearDialog
         open={game.solved}
         art={<DessertArt id="macaron" size={96} />}
-        title={`레벨 ${game.level} 완성!`}
-        detail={`걸린 시간 ${formatTime(game.elapsedSeconds)}`}
-        nextLabel="다음 레벨"
-        onNext={() => startZone()}
-        score={lastScore}
+        title={daily ? dailyClear.title : `레벨 ${game.level} 완성!`}
+        detail={daily ? dailyClear.detail : `걸린 시간 ${formatTime(game.elapsedSeconds)}`}
+        nextLabel={daily ? dailyClear.nextLabel : "다음 레벨"}
+        onNext={daily ? dailyClear.onNext : () => startZone()}
+        score={daily ? null : lastScore}
       />
+      {hint.toast}
     </Page>
   );
 }

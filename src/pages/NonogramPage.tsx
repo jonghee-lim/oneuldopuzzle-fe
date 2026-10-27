@@ -13,8 +13,9 @@ import ConfirmRestart from "../components/puzzle/ConfirmRestart";
 import PuzzleBoard from "../components/puzzle/PuzzleBoard";
 import StageTabs from "../components/puzzle/StageTabs";
 import ToolButton from "../components/puzzle/ToolButton";
+import { useHint } from "../components/puzzle/useHint";
 import { cue } from "../platform/feedback";
-import { colDone, newNonogramGame, restartNonogram, rowDone, setTool, tapNonogramCell, undoNonogram, type NonogramTool } from "../puzzle/nonogram/game";
+import { applyNonogramHint, colDone, findNonogramHint, newNonogramGame, restartNonogram, rowDone, setTool, tapNonogramCell, undoNonogram, type NonogramTool } from "../puzzle/nonogram/game";
 import { NONOGRAMS } from "../puzzle/nonogram/puzzles";
 import { usePuzzleStore } from "../stores/puzzleStore";
 import { dessert } from "../theme/palette";
@@ -29,6 +30,7 @@ function NonogramStage({ stage, onStage }: { stage: number; onStage: (stage: num
   const picture = NONOGRAMS[stage];
   const [game, setGame] = useState(() => newNonogramGame(picture));
   const [confirm, setConfirm] = useState(false);
+  const hint = useHint();
   const { width, height } = game;
   const doneRows = useMemo(() => Array.from({ length: height }, (_, r) => rowDone(game, r)), [game, height]);
   const doneCols = useMemo(() => Array.from({ length: width }, (_, c) => colDone(game, c)), [game, width]);
@@ -118,6 +120,13 @@ function NonogramStage({ stage, onStage }: { stage: number; onStage: (stage: num
       <Box sx={{ px: 1.5, pt: 2, display: "flex", gap: 1, alignItems: "center" }}>
         <ToolButton label="다시 하기" onClick={() => setConfirm(true)} icon={<RestartAltIcon sx={{ fontSize: 18 }} />} />
         <Box sx={{ flex: 1 }} />
+        {hint.button(() =>
+          hint.give(
+            () => findNonogramHint(game),
+            (h) => setGame((g) => applyNonogramHint(g, h)),
+            (h) => `${Math.floor(h.index / game.width) + 1}행 ${(h.index % game.width) + 1}열${h.remove ? "은 비어 있어야 해서 X로 바꿨어요." : "을 칠했어요."}`,
+          ),
+        )}
         <ToolButton label="되돌리기" onClick={() => setGame(undoNonogram)} icon={<UndoIcon sx={{ fontSize: 18 }} />} />
       </Box>
 
@@ -159,6 +168,7 @@ function NonogramStage({ stage, onStage }: { stage: number; onStage: (stage: num
         score={lastScore}
         onNext={stage < NONOGRAMS.length - 1 ? () => onStage(stage + 1) : undefined}
       />
+      {hint.toast}
     </Page>
   );
 }

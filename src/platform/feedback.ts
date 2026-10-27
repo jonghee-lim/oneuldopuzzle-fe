@@ -1,6 +1,7 @@
 // 효과음·진동. 소리 파일 없이 Web Audio로 짧고 부드러운 소리를 만듭니다.
 // 인기 스도쿠 앱(Sudoku.com 등)처럼 효과음은 켜 두되 작게, 설정에서 끌 수 있게 합니다(2026-10-26 검토).
 import { usePuzzleStore } from "../stores/puzzleStore";
+import { isNativeApp, nativeBuzz } from "./native";
 
 export type Cue = "tap" | "place" | "erase" | "wrong" | "line" | "clear";
 
@@ -52,12 +53,18 @@ const SOUNDS: Record<Cue, (a: AudioContext) => void> = {
 };
 
 const VIBRATION: Partial<Record<Cue, number | number[]>> = { place: 8, wrong: [20, 40, 20], line: 15, clear: [30, 50, 60] };
+const NATIVE_BUZZ: Partial<Record<Cue, Parameters<typeof nativeBuzz>[0]>> = { place: "light", wrong: "error", line: "medium", clear: "success" };
 
 export function cue(name: Cue) {
   const { sound, haptics } = usePuzzleStore.getState().settings;
   if (sound) {
     const a = audio();
     if (a) SOUNDS[name](a);
+  }
+  if (haptics && isNativeApp()) {
+    const kind = NATIVE_BUZZ[name];
+    if (kind) void nativeBuzz(kind).catch(() => {});
+    return;
   }
   if (haptics && VIBRATION[name] !== undefined && typeof navigator !== "undefined" && "vibrate" in navigator) {
     try {

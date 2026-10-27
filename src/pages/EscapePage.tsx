@@ -11,8 +11,9 @@ import ConfirmRestart from "../components/puzzle/ConfirmRestart";
 import PuzzleBoard from "../components/puzzle/PuzzleBoard";
 import StageTabs from "../components/puzzle/StageTabs";
 import ToolButton from "../components/puzzle/ToolButton";
+import { useHint } from "../components/puzzle/useHint";
 import { cue } from "../platform/feedback";
-import { newEscapeGame, restartEscape, swipeBlock, tapBlock, tapEscapeCell, targetCells, undoEscape } from "../puzzle/escape/game";
+import { applyEscapeHint, findEscapeHint, newEscapeGame, restartEscape, swipeBlock, tapBlock, tapEscapeCell, targetCells, undoEscape } from "../puzzle/escape/game";
 import type { Block } from "../puzzle/escape/rules";
 import { useSwipe, type Swipe } from "../components/puzzle/useSwipe";
 import type { ReactNode } from "react";
@@ -35,6 +36,7 @@ function EscapeStage({ stage, onStage }: { stage: number; onStage: (stage: numbe
   const puzzle = ESCAPES[stage];
   const [game, setGame] = useState(() => newEscapeGame(puzzle.board));
   const [confirm, setConfirm] = useState(false);
+  const hint = useHint();
   const targets = useMemo(() => targetCells(game), [game]);
   const cellPct = 100 / ESCAPE_SIZE;
   const escapeBest = usePuzzleStore((s) => s.escapeBest);
@@ -131,6 +133,13 @@ function EscapeStage({ stage, onStage }: { stage: number; onStage: (stage: numbe
       <Box sx={{ px: 1.5, pt: 1, display: "flex", gap: 1 }}>
         <ToolButton label="다시 하기" onClick={() => setConfirm(true)} icon={<RestartAltIcon sx={{ fontSize: 18 }} />} />
         <Box sx={{ flex: 1 }} />
+        {hint.button(() =>
+          hint.give(
+            () => findEscapeHint(game),
+            (h) => setGame((g) => applyEscapeHint(g, h)),
+            () => "가장 빠른 길로 블록 하나를 옮겼어요.",
+          ),
+        )}
         <ToolButton label="되돌리기" onClick={() => setGame(undoEscape)} icon={<UndoIcon sx={{ fontSize: 18 }} />} />
       </Box>
 
@@ -152,6 +161,7 @@ function EscapeStage({ stage, onStage }: { stage: number; onStage: (stage: numbe
         score={lastScore}
         onNext={stage < ESCAPES.length - 1 ? () => onStage(stage + 1) : undefined}
       />
+      {hint.toast}
     </Page>
   );
 }

@@ -22,7 +22,7 @@ page.on("pageerror", (e) => errors.push(String(e)));
 // 노노그램
 await page.goto(BASE);
 if (shots) await page.screenshot({ path: `${shots}/s0-home.png`, fullPage: true });
-await page.getByRole("link", { name: /노노그램/ }).tap();
+await page.getByRole("navigation", { name: "퍼즐 고르기" }).getByRole("link", { name: /노노그램/ }).tap();
 await page.getByRole("grid", { name: /노노그램 판/ }).waitFor();
 const grid = pictureGrid(NONOGRAMS[0]);
 const cells = page.getByRole("gridcell");
@@ -38,7 +38,7 @@ if (shots) await page.screenshot({ path: `${shots}/s2-nonogram10.png` });
 
 // 블록 탈출
 await page.goto(BASE);
-await page.getByRole("link", { name: /블록 탈출/ }).tap();
+await page.getByRole("navigation", { name: "퍼즐 고르기" }).getByRole("link", { name: /블록 탈출/ }).tap();
 await page.getByRole("grid", { name: "블록 탈출 판" }).waitFor();
 const solved = solveEscape(ESCAPES[0].board);
 let blocks = parseBoard(ESCAPES[0].board);
@@ -79,7 +79,7 @@ await page.getByRole("grid", { name: "블록 탈출 판" }).waitFor();
 
 // 색깔 구역: 홈 타일에서 들어가 답 자리를 눌러 완성하고 다음 레벨로
 await page.goto(BASE);
-await page.getByRole("link", { name: /색깔 구역/ }).tap();
+await page.getByRole("navigation", { name: "퍼즐 고르기" }).getByRole("link", { name: /색깔 구역/ }).tap();
 await page.getByRole("grid", { name: /색깔 구역 판/ }).waitFor();
 const zone = await page.evaluate(() => JSON.parse(localStorage.getItem("oneuldopuzzle-v1")).state.zoneGame);
 const zc = page.getByRole("gridcell");
@@ -98,7 +98,7 @@ await page.getByRole("heading", { name: "레벨 2" }).waitFor();
 
 // 슬라이딩: 최소 수 표를 따라 한 칸씩 줄여 가며 누르면 최소 수로 완성
 await page.goto(BASE);
-await page.getByRole("link", { name: /슬라이딩/ }).tap();
+await page.getByRole("navigation", { name: "퍼즐 고르기" }).getByRole("link", { name: /슬라이딩/ }).tap();
 await page.getByRole("grid", { name: /슬라이딩 판/ }).waitFor();
 const slide = await page.evaluate(() => JSON.parse(localStorage.getItem("oneuldopuzzle-v1")).state.slideGame);
 let board = slide.board;
@@ -128,7 +128,7 @@ if (shots) await page.screenshot({ path: `${shots}/s10-sliding-clear.png` });
 
 // 블록 채우기: 블록을 고르고 답의 기준 칸을 누르기, 엉뚱한 자리는 막힘 안내
 await page.goto(BASE);
-await page.getByRole("link", { name: /블록 채우기/ }).tap();
+await page.getByRole("navigation", { name: "퍼즐 고르기" }).getByRole("link", { name: /블록 채우기/ }).tap();
 await page.getByRole("grid", { name: /블록 채우기 판/ }).waitFor();
 const bg = await page.evaluate(() => JSON.parse(localStorage.getItem("oneuldopuzzle-v1")).state.blockGame);
 const bc = page.getByRole("gridcell");

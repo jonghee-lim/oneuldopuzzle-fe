@@ -33,7 +33,15 @@ export interface SudokuGame {
   completed: boolean;
   /** '틀린 칸 보기'를 쓴 판(도움 없이 점수를 주지 않음) */
   usedCheck?: boolean;
+  /** 힌트를 쓴 판(도움 없이 점수를 주지 않음) */
+  usedHint?: boolean;
 }
+
+/**
+ * 힌트: 틀린 숫자가 있으면 그 칸부터 알려 주고, 없으면 사람이 찾을 수 있는 다음 칸(단서)을 알려 줍니다.
+ * only: 이 칸에 들어갈 숫자가 하나뿐 · row/col/box: 그 줄·칸줄·상자에서 이 숫자가 갈 곳이 여기뿐 · answer: 단서로 못 찾아 답을 알려 줌
+ */
+export type SudokuHint = { kind: "wrong"; index: number } | { kind: "place"; index: number; digit: number; reason: "only" | "row" | "col" | "box" | "answer" };
 
 export function newGame(args: { id: string; level: number; difficulty: SudokuDifficulty; puzzle: SudokuGrid; solution: SudokuGrid }): SudokuGame {
   return {
@@ -130,6 +138,40 @@ export function undo(game: SudokuGame): SudokuGame {
 export function restart(game: SudokuGame): SudokuGame {
   const fresh = newGame({ id: game.id, level: game.level, difficulty: game.difficulty, puzzle: game.puzzle, solution: game.solution });
   return { ...fresh, memoMode: game.memoMode, activeNumber: game.activeNumber };
+}
+
+export function findHint(game: SudokuGame): SudokuHint | null {
+  if (game.completed) return null;
+  const wrong = game.values.findIndex((v, i) => v !== 0 && v !== game.solution[i]);
+  if (wrong >= 0) return { kind: "wrong", index: wrong };
+  const cells = game.values;
+  const candidates = (i: number) => {
+    let used = 0;
+    for (const p of PEERS[i]) if (cells[p]) used |= 1 << cells[p];
+    return 0x3fe & ~used;
+  };
+  // 고른 칸 가까이부터 보면 지금 보고 있던 곳의 단서를 먼저 알려 줄 수 있지만, 순서가 흔들리지 않게 앞에서부터 찾습니다.
+  for (let i = 0; i < CELLS; i += 1) {
+    if (cells[i]) continue;
+    const mask = candidates(i);
+    if (mask && (mask & (mask - 1)) === 0) return { kind: "place", index: i, digit: Math.log2(mask), reason: "only" };
+  }
+  for (let u = 0; u < UNITS.length; u += 1) {
+    const unit = UNITS[u];
+    for (let d = 1; d <= 9; d += 1) {
+      if (unit.some((i) => cells[i] === d)) continue;
+      const spots = unit.filter((i) => !cells[i] && candidates(i) & (1 << d));
+      if (spots.length === 1) return { kind: "place", index: spots[0], digit: d, reason: u < 9 ? "row" : u < 18 ? "col" : "box" };
+    }
+  }
+  const empty = cells.findIndex((v) => v === 0);
+  return empty < 0 ? null : { kind: "place", index: empty, digit: game.solution[empty], reason: "answer" };
+}
+
+/** 힌트를 판에 반영: 틀린 칸은 비우고, 알려 준 칸에는 숫자를 넣습니다. 둘 다 그 칸을 골라 둡니다. */
+export function applyHint(game: SudokuGame, hint: SudokuHint): SudokuGame {
+  const next = hint.kind === "wrong" ? apply(game, [{ index: hint.index, value: 0, notes: 0 }]) : placeValue({ ...game, memoMode: false }, hint.index, hint.digit);
+  return { ...next, memoMode: game.memoMode, selected: hint.index, usedHint: true };
 }
 
 export function toggleMemo(game: SudokuGame): SudokuGame {

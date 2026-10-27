@@ -22,3 +22,10 @@ test("슬라이딩·블록 채우기 점수", () => {
   assert.equal(total(blockScore(5, 60)), 15 + 8);
   assert.equal(total(blockScore(5, 999)), 15);
 });
+
+test("오늘의 퍼즐 힌트 보상: 한 판 1개, 세 번째 판은 보너스 2개 더", async () => {
+  const { dailyHintReward } = await import("../src/puzzle/core/score.ts");
+  assert.equal(dailyHintReward(0, 3), 1);
+  assert.equal(dailyHintReward(1, 3), 1);
+  assert.equal(dailyHintReward(2, 3), 3);
+});

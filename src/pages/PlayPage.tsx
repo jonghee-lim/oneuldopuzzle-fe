@@ -16,22 +16,42 @@ import { findConflicts } from "../puzzle/sudoku/rules";
 import DessertArt from "../components/dessert/DessertArt";
 import NumberPad from "../components/sudoku/NumberPad";
 import SudokuCellContent from "../components/sudoku/SudokuCellContent";
-import { DIFFICULTY_LABEL, difficultyForLevel } from "../puzzle/sudoku/generator";
+import { DIFFICULTY_LABEL } from "../puzzle/sudoku/generator";
 import {
-  conflictsOf, deadCells, digitCounts, erase, newlyCompletedCells, formatTime, isFilledButWrong, isGiven, restart, tapCell, tapNumber, tick, toggleMemo, undo, wrongCells,
+  applyHint, conflictsOf, deadCells, findHint, digitCounts, erase, newlyCompletedCells, formatTime, isFilledButWrong, isGiven, restart, tapCell, tapNumber, tick, toggleMemo, undo, wrongCells,
 } from "../puzzle/sudoku/game";
 import { boxOf } from "../puzzle/sudoku/rules";
-import { usePuzzleStore } from "../stores/puzzleStore";
+import { sudokuNext, usePuzzleStore } from "../stores/puzzleStore";
+import { dailyDessert, useIsDaily } from "../components/daily/daily";
+import { useDailyClear } from "../components/daily/useDailyClear";
+import ClearDialog from "../components/puzzle/ClearDialog";
+import { useHint } from "../components/puzzle/useHint";
 import { flash, popIn } from "../theme/motion";
 import { dessert, dessertForLevel } from "../theme/palette";
 
+const HINT_REASON = {
+  only: "이 칸에는 이 숫자밖에 들어갈 수 없어요.",
+  row: "이 가로줄에서 이 숫자가 갈 곳은 여기뿐이에요.",
+  col: "이 세로줄에서 이 숫자가 갈 곳은 여기뿐이에요.",
+  box: "이 상자에서 이 숫자가 갈 곳은 여기뿐이에요.",
+  answer: "단서로 찾기 어려운 칸이라 답을 넣었어요.",
+} as const;
+
+const cellName = (index: number) => `${Math.floor(index / 9) + 1}행 ${(index % 9) + 1}열`;
+
 export default function PlayPage() {
   const navigate = useNavigate();
-  const clearedLevel = usePuzzleStore((s) => s.clearedLevel);
-  const game = usePuzzleStore((s) => s.game);
+  const sudokuCleared = usePuzzleStore((s) => s.sudokuCleared);
+  // 주소에 ?daily가 붙으면 오늘의 퍼즐 스도쿠를 엽니다(레벨과 따로).
+  const daily = useIsDaily();
+  const game = usePuzzleStore((s) => (daily ? s.dailySudoku : s.game));
   const settings = usePuzzleStore((s) => s.settings);
   const startLevel = usePuzzleStore((s) => s.startLevel);
-  const updateGame = usePuzzleStore((s) => s.updateGame);
+  const updateGame = usePuzzleStore((s) => (daily ? s.updateDailySudoku : s.updateGame));
+  const startDailySudoku = usePuzzleStore((s) => s.startDailySudoku);
+  const read = () => (daily ? usePuzzleStore.getState().dailySudoku : usePuzzleStore.getState().game);
+  const hint = useHint();
+  const dailyClear = useDailyClear(game?.elapsedSeconds ?? 0);
   const [confirmRestart, setConfirmRestart] = useState(false);
   const lastScore = usePuzzleStore((s) => s.lastScore);
   // 줄·상자를 다 채우면 그 칸들이 한 번 반짝입니다(key를 바꿔 매번 다시 재생).
@@ -39,9 +59,9 @@ export default function PlayPage() {
 
   /** 판을 바꾸고 결과에 맞는 소리·진동·반짝임을 냅니다. */
   const act = (update: (g: SudokuGame) => SudokuGame) => {
-    const before = usePuzzleStore.getState().game;
+    const before = read();
     updateGame(update);
-    const after = usePuzzleStore.getState().game;
+    const after = read();
     if (!before || !after || before === after || before.values === after.values) return;
     if (after.completed) {
       cue("clear");
@@ -59,11 +79,15 @@ export default function PlayPage() {
   // 다 푼 판을 보고 있는 동안에는 새 판으로 바꾸지 않습니다(완성 창에서 '다음 레벨'을 눌러야 넘어감).
   const chosenDifficulty = usePuzzleStore((s) => s.chosenDifficulty);
   useEffect(() => {
+    if (daily) {
+      usePuzzleStore.getState().ensureDaily();
+      startDailySudoku();
+      return;
+    }
     const current = usePuzzleStore.getState().game;
-    const level = clearedLevel + 1;
-    const difficulty = chosenDifficulty ?? difficultyForLevel(level);
+    const { level, difficulty } = sudokuNext({ sudokuCleared, chosenDifficulty });
     if (!current || (!current.completed && (current.level !== level || current.difficulty !== difficulty))) startLevel(level);
-  }, [clearedLevel, chosenDifficulty, startLevel]);
+  }, [daily, sudokuCleared, chosenDifficulty, startLevel, startDailySudoku]);
 
   // 화면을 보고 있을 때만 시간이 갑니다.
   useEffect(() => {
@@ -110,14 +134,14 @@ export default function PlayPage() {
   return (
     <Page>
       <Box component="header" sx={{ display: "flex", alignItems: "center", px: 1, pt: "calc(env(safe-area-inset-top) + 8px)", pb: 0.5 }}>
-        <IconButton aria-label="처음 화면으로" onClick={() => navigate("/")}>
+        <IconButton aria-label={daily ? "처음 화면으로" : "스도쿠 화면으로"} onClick={() => navigate(daily ? "/" : "/sudoku")}>
           <ArrowBackIosNewIcon fontSize="small" />
         </IconButton>
         <Box sx={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 1, minWidth: 0 }}>
-          <DessertArt id={dessertForLevel(game.level).id} size={30} />
+          <DessertArt id={(daily ? dailyDessert() : dessertForLevel(game.level)).id} size={30} />
           <Box>
             <Typography component="h1" sx={{ fontWeight: 700, fontSize: 20, lineHeight: 1.2 }}>
-              레벨 {game.level}
+              {daily ? "오늘의 퍼즐" : `레벨 ${game.level}`}
             </Typography>
             <Typography sx={{ fontSize: 13, color: "text.secondary", lineHeight: 1.3 }}>{DIFFICULTY_LABEL[game.difficulty]}</Typography>
           </Box>
@@ -166,7 +190,7 @@ export default function PlayPage() {
             {!showWrong && (
               <Button size="small" onClick={() => {
                   updateGame((g) => (g.usedCheck ? g : { ...g, usedCheck: true }));
-                  setCheckedValues(usePuzzleStore.getState().game?.values ?? null);
+                  setCheckedValues(read()?.values ?? null);
                 }} sx={{ fontWeight: 700, color: dessert.conflict, minHeight: 28, py: 0, textDecoration: "underline", textUnderlineOffset: "3px" }}>
                 틀린 칸 보기
               </Button>
@@ -180,8 +204,15 @@ export default function PlayPage() {
 
       <Box sx={{ px: 1.5, display: "flex", gap: 1, pb: 1 }}>
         {/* 다시 하기는 되돌릴 수 없어 왼쪽에 떨어뜨려 두고 확인 창을 거칩니다. */}
-        <ToolButton label="다시 하기" onClick={() => setConfirmRestart(true)} icon={<RestartAltIcon sx={{ fontSize: 18 }} />} />
+        <ToolButton label="다시 하기" compact onClick={() => setConfirmRestart(true)} icon={<RestartAltIcon sx={{ fontSize: 20 }} />} />
         <Box sx={{ flex: 1 }} />
+        {hint.button(() =>
+          hint.give(
+            () => findHint(game),
+            (h) => act((g) => applyHint(g, h)),
+            (h) => (h.kind === "wrong" ? `${cellName(h.index)} 숫자가 틀려서 지웠어요.` : `${cellName(h.index)}에 ${h.digit}: ${HINT_REASON[h.reason]}`),
+          ),
+        )}
         <ToolButton label="되돌리기" onClick={() => act(undo)} icon={<UndoIcon sx={{ fontSize: 18 }} />} />
         {/* 메모는 작게 숨겨 둡니다(설계서). 켜면 숫자 패드가 민트색으로 바뀝니다. */}
         <ToolButton
@@ -212,7 +243,18 @@ export default function PlayPage() {
         }}
       />
 
-      <Dialog open={game.completed} slotProps={{ paper: { sx: { width: "min(360px, calc(100% - 32px))", p: 3, textAlign: "center", bgcolor: dessert.cream } } }}>
+      {daily && (
+        <ClearDialog
+          open={game.completed}
+          art={<DessertArt id={dailyDessert().id} size={112} />}
+          title={dailyClear.title}
+          detail={dailyClear.detail}
+          nextLabel={dailyClear.nextLabel}
+          onNext={dailyClear.onNext}
+        />
+      )}
+      {hint.toast}
+      <Dialog open={!daily && game.completed} slotProps={{ paper: { sx: { width: "min(360px, calc(100% - 32px))", p: 3, textAlign: "center", bgcolor: dessert.cream } } }}>
         <Box sx={{ display: "flex", justifyContent: "center", ...popIn }}>
           <DessertArt id={dessertForLevel(game.level).id} size={112} />
         </Box>
@@ -226,8 +268,8 @@ export default function PlayPage() {
         <Button variant="contained" size="large" fullWidth onClick={goNext} sx={{ mt: 3, height: 52 }}>
           다음 레벨
         </Button>
-        <Button fullWidth onClick={() => { goNext(); navigate("/"); }} sx={{ mt: 1, color: "text.secondary" }}>
-          처음 화면
+        <Button fullWidth onClick={() => { goNext(); navigate("/sudoku"); }} sx={{ mt: 1, color: "text.secondary" }}>
+          스도쿠 화면
         </Button>
       </Dialog>
     </Page>

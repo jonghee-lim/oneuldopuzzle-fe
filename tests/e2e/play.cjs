@@ -13,21 +13,26 @@ const shots = process.argv[2];
   const errors = [];
   page.on("pageerror", (e) => errors.push(String(e)));
 
+  // 첫 화면은 여섯 퍼즐 카드, 스도쿠 카드를 누르면 스도쿠 화면(난이도 고르기)
   await page.goto(BASE);
+  await page.getByRole("heading", { name: "어떤 퍼즐을 풀까요?" }).waitFor();
+  assert.equal(await page.getByRole("navigation", { name: "퍼즐 고르기" }).getByRole("link").count(), 6);
+  if (shots) await page.screenshot({ path: `${shots}/1-home.png`, fullPage: true });
+  await page.getByRole("navigation", { name: "퍼즐 고르기" }).getByRole("link", { name: /스도쿠/ }).tap();
   await page.getByRole("heading", { name: "레벨 1" }).waitFor();
-  if (shots) await page.screenshot({ path: `${shots}/1-home.png` });
+  if (shots) await page.screenshot({ path: `${shots}/1b-sudoku.png` });
   // 난이도를 고르면 그 난이도로 문제가 나온다
   await page.getByRole("button", { name: "어려움", exact: true }).tap();
   await page.getByRole("button", { name: "시작하기" }).tap();
   await page.getByText("어려움").first().waitFor();
   // 판을 열어 두기만 하고 돌아오면 '이어 하기'가 아니라 '시작하기'(2026-10-26 '이어 하기 0:03' 신고)
   await page.waitForTimeout(2500);
-  await page.getByRole("button", { name: "처음 화면으로" }).tap();
+  await page.getByRole("button", { name: "스도쿠 화면으로" }).tap();
   await page.getByRole("button", { name: "시작하기" }).waitFor();
   await page.getByRole("button", { name: "시작하기" }).tap();
   const hard = await page.evaluate(() => JSON.parse(localStorage.getItem("oneuldopuzzle-v1")).state.game);
   assert.equal(hard.difficulty, "hard");
-  await page.getByRole("button", { name: "처음 화면으로" }).tap();
+  await page.getByRole("button", { name: "스도쿠 화면으로" }).tap();
   await page.getByRole("button", { name: "쉬움", exact: true }).tap();
   await page.getByRole("button", { name: "시작하기" }).tap();
   await page.getByRole("grid", { name: "스도쿠 판" }).waitFor();
@@ -83,6 +88,8 @@ const shots = process.argv[2];
   const st = await page.evaluate(() => JSON.parse(localStorage.getItem("oneuldopuzzle-v1")).state);
   assert.ok(st.score > 0);
   assert.equal(st.stats.easy.cleared, 1);
+  // 레벨은 난이도마다 따로: 쉬움만 1레벨 깼고 어려움은 그대로 레벨 1
+  assert.deepEqual(st.sudokuCleared, { easy: 1 });
   if (shots) await page.screenshot({ path: `${shots}/5b-records.png`, fullPage: true });
 
   // 숫자 먼저 고르기

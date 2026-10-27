@@ -1,7 +1,8 @@
 // 진행 상황·점수·설정을 기기에 저장합니다. 계정·동기화는 이후 단계에서 공용 API에 붙입니다.
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { blockScore, slideScore, specialScore, sudokuScore, total, zoneScore, type ScoreLine } from "../puzzle/core/score";
+import { HINT_START, blockScore, dailyHintReward, slideScore, specialScore, sudokuScore, total, zoneScore, type ScoreLine } from "../puzzle/core/score";
+import { dailyBlocks, dailyKinds, dailySlide, dailySudoku, dailyZones, dateKey, type DailyKind } from "../puzzle/core/daily";
 import { blocksForLevel } from "../puzzle/blocks/generator";
 import { newBlockGame, type BlockGame } from "../puzzle/blocks/game";
 import { slideForLevel } from "../puzzle/sliding/generator";
@@ -34,8 +35,10 @@ export type StatKey = SudokuDifficulty | "zones" | "sliding" | "blocks";
 
 interface PuzzleState {
   /** 깬 가장 높은 레벨(0이면 아직 없음) */
-  clearedLevel: number;
-  bestSeconds: Record<number, number>;
+  /** 난이도마다 따로 이어지는 스도쿠 레벨: 그 난이도에서 깬 마지막 레벨(2026-10-26 사용자 결정) */
+  sudokuCleared: Partial<Record<SudokuDifficulty, number>>;
+  /** 스도쿠 최고 기록(초). 키는 "난이도:레벨" */
+  bestSeconds: Record<string, number>;
   settings: PuzzleSettings;
   game: SudokuGame | null;
   /** 난이도를 바꾸느라 잠시 멈춘 판(난이도마다 하나). 같은 레벨로 돌아오면 이어서 풉니다. */
@@ -60,6 +63,20 @@ interface PuzzleState {
   nonogramCleared: number[];
   /** 스페셜 체험: 블록 탈출 단계별 가장 적은 이동 수 */
   escapeBest: Record<number, number>;
+  /** 남은 힌트 수 */
+  hints: number;
+  /** 오늘의 퍼즐: 날짜와 그날의 판들(날짜가 바뀌면 새로 만듭니다) */
+  dailyDate: string | null;
+  dailySudoku: SudokuGame | null;
+  dailyZone: ZoneGame | null;
+  dailyBlocks: BlockGame | null;
+  dailySlide: SlideGame | null;
+  /** 오늘 다 푼 판 종류 */
+  dailyDone: DailyKind[];
+  /** 세 판을 다 푼 날짜들(연속 출석 계산, 최근 400일만) */
+  dailyDays: string[];
+  /** 방금 푼 오늘의 퍼즐로 받은 힌트 수(완성 창에 보여 줌) */
+  lastHintReward: number;
 
   chooseDifficulty: (difficulty: SudokuDifficulty) => void;
   /** 지금 풀 레벨의 판을 준비합니다(같은 레벨·난이도로 진행 중이면 그대로). */
@@ -74,7 +91,21 @@ interface PuzzleState {
   updateBlocks: (update: (game: BlockGame) => BlockGame) => void;
   clearNonogram: (stage: number) => void;
   clearEscape: (stage: number, moves: number, minMoves: number) => void;
+  /** 힌트 하나를 씁니다. 남은 힌트가 없으면 false */
+  spendHint: () => boolean;
+  /** 날짜가 바뀌었으면 오늘의 퍼즐을 새로 준비합니다. */
+  ensureDaily: () => void;
+  startDailySudoku: () => SudokuGame;
+  updateDailySudoku: (update: (game: SudokuGame) => SudokuGame) => void;
+  startDailyZone: () => ZoneGame;
+  updateDailyZone: (update: (game: ZoneGame) => ZoneGame) => void;
+  startDailyBlocks: () => BlockGame;
+  updateDailyBlocks: (update: (game: BlockGame) => BlockGame) => void;
+  startDailySlide: () => SlideGame;
+  updateDailySlide: (update: (game: SlideGame) => SlideGame) => void;
 }
+
+const DAILY_RESET = { dailySudoku: null, dailyZone: null, dailyBlocks: null, dailySlide: null, dailyDone: [] as DailyKind[] };
 
 function addStat(stats: PuzzleState["stats"], key: StatKey, seconds: number): PuzzleState["stats"] {
   const prev = stats[key] ?? { cleared: 0, totalSeconds: 0 };
@@ -88,10 +119,46 @@ function addStat(stats: PuzzleState["stats"], key: StatKey, seconds: number): Pu
   };
 }
 
+/** 난이도를 고른 적이 없으면 쉬움부터 */
+export const DEFAULT_DIFFICULTY: SudokuDifficulty = "easy";
+
+/** 고른 난이도와 그 난이도의 다음 레벨 */
+export function sudokuNext(s: Pick<PuzzleState, "sudokuCleared" | "chosenDifficulty">): { difficulty: SudokuDifficulty; level: number } {
+  const difficulty = s.chosenDifficulty ?? DEFAULT_DIFFICULTY;
+  return { difficulty, level: (s.sudokuCleared[difficulty] ?? 0) + 1 };
+}
+
 export const usePuzzleStore = create<PuzzleState>()(
   persist(
-    (set, get) => ({
-      clearedLevel: 0,
+    (set, get) => {
+      type Slot = "dailySudoku" | "dailyZone" | "dailyBlocks" | "dailySlide";
+      /** 오늘의 퍼즐 한 판을 바꾸고, 방금 풀었으면 힌트를 주고 세 판을 다 풀면 출석으로 셉니다. */
+      function updateDaily<G>(kind: DailyKind, slot: Slot, solved: (g: G) => boolean, update: (g: G) => G) {
+        const before = get()[slot] as G | null;
+        if (!before) return;
+        const game = update(before);
+        if (game === before) return;
+        const done = get().dailyDone;
+        if (solved(game) && !solved(before) && !done.includes(kind)) {
+          const date = get().dailyDate!;
+          const total = dailyKinds(date).length;
+          const reward = dailyHintReward(done.length, total);
+          const dailyDone = [...done, kind];
+          const allDone = dailyDone.length === total;
+          set({
+            [slot]: game,
+            dailyDone,
+            hints: get().hints + reward,
+            lastHintReward: reward,
+            dailyDays: allDone && !get().dailyDays.includes(date) ? [...get().dailyDays, date].slice(-400) : get().dailyDays,
+          } as Partial<PuzzleState>);
+          return;
+        }
+        set({ [slot]: game } as Partial<PuzzleState>);
+      }
+
+      return {
+      sudokuCleared: {},
       bestSeconds: {},
       settings: { inputMode: "cell-first", highlightSame: true, showConflicts: true, sound: true, haptics: true },
       game: null,
@@ -108,11 +175,16 @@ export const usePuzzleStore = create<PuzzleState>()(
       blockGame: null,
       nonogramCleared: [],
       escapeBest: {},
+      hints: HINT_START,
+      dailyDate: null,
+      ...DAILY_RESET,
+      dailyDays: [],
+      lastHintReward: 0,
 
       chooseDifficulty: (difficulty) => set({ chosenDifficulty: difficulty }),
       startLevel: (level) => {
         const current = get().game;
-        const difficulty = get().chosenDifficulty ?? difficultyForLevel(level);
+        const difficulty = get().chosenDifficulty ?? DEFAULT_DIFFICULTY;
         if (current && current.level === level && current.difficulty === difficulty && !current.completed) return current;
         const paused = { ...get().paused };
         // 하던 판은 버리지 않고 그 난이도 자리에 넣어 둡니다.
@@ -134,12 +206,13 @@ export const usePuzzleStore = create<PuzzleState>()(
         const game = update(before);
         if (game === before) return;
         if (game.completed && !before.completed) {
-          const best = get().bestSeconds[game.level];
-          const lines = sudokuScore(game.difficulty, game.elapsedSeconds, !!game.usedCheck);
+          const key = `${game.difficulty}:${game.level}`;
+          const best = get().bestSeconds[key];
+          const lines = sudokuScore(game.difficulty, game.elapsedSeconds, !!game.usedCheck || !!game.usedHint);
           set({
             game,
-            clearedLevel: Math.max(get().clearedLevel, game.level),
-            bestSeconds: { ...get().bestSeconds, [game.level]: best ? Math.min(best, game.elapsedSeconds) : game.elapsedSeconds },
+            sudokuCleared: { ...get().sudokuCleared, [game.difficulty]: Math.max(get().sudokuCleared[game.difficulty] ?? 0, game.level) },
+            bestSeconds: { ...get().bestSeconds, [key]: best ? Math.min(best, game.elapsedSeconds) : game.elapsedSeconds },
             score: get().score + total(lines),
             stats: addStat(get().stats, game.difficulty, game.elapsedSeconds),
             lastScore: lines,
@@ -248,10 +321,70 @@ export const usePuzzleStore = create<PuzzleState>()(
           lastScore: lines,
         });
       },
-    }),
+
+      spendHint: () => {
+        if (get().hints <= 0) return false;
+        set({ hints: get().hints - 1 });
+        return true;
+      },
+      ensureDaily: () => {
+        const today = dateKey();
+        if (get().dailyDate !== today) set({ dailyDate: today, ...DAILY_RESET });
+      },
+      startDailySudoku: () => {
+        get().ensureDaily();
+        const current = get().dailySudoku;
+        if (current) return current;
+        const p = dailySudoku(get().dailyDate!);
+        const game = newGame({ id: p.id, level: 0, difficulty: p.difficulty, puzzle: p.puzzle, solution: p.solution });
+        set({ dailySudoku: game });
+        return game;
+      },
+      updateDailySudoku: (update) => updateDaily("sudoku", "dailySudoku", (g) => g.completed, update),
+      startDailyZone: () => {
+        get().ensureDaily();
+        const current = get().dailyZone;
+        if (current) return current;
+        const game = newZoneGame(0, dailyZones(get().dailyDate!));
+        set({ dailyZone: game });
+        return game;
+      },
+      updateDailyZone: (update) => updateDaily("zones", "dailyZone", (g) => g.solved, update),
+      startDailyBlocks: () => {
+        get().ensureDaily();
+        const current = get().dailyBlocks;
+        if (current) return current;
+        const game = newBlockGame(0, dailyBlocks(get().dailyDate!));
+        set({ dailyBlocks: game });
+        return game;
+      },
+      updateDailyBlocks: (update) => updateDaily("blocks", "dailyBlocks", (g) => g.solved, update),
+      startDailySlide: () => {
+        get().ensureDaily();
+        const current = get().dailySlide;
+        if (current) return current;
+        const game = newSlideGame(0, dailySlide(get().dailyDate!));
+        set({ dailySlide: game });
+        return game;
+      },
+      updateDailySlide: (update) => updateDaily("sliding", "dailySlide", (g) => g.solved, update),
+      };
+    },
     {
       name: "oneuldopuzzle-v1",
-      version: 1,
+      version: 2,
+      // 버전 1은 모든 난이도가 레벨 하나를 같이 썼습니다. 깬 레벨은 그때 고른 난이도의 레벨로 옮깁니다.
+      migrate: (persisted, version) => {
+        const p = (persisted ?? {}) as Partial<PuzzleState> & { clearedLevel?: number; bestSeconds?: Record<string, number> };
+        if (version < 2) {
+          const cleared = p.clearedLevel ?? 0;
+          const difficulty = p.chosenDifficulty ?? difficultyForLevel(cleared + 1);
+          const next = { ...p, chosenDifficulty: difficulty, sudokuCleared: cleared ? { [difficulty]: cleared } : {}, bestSeconds: {} };
+          delete next.clearedLevel;
+          return next as never;
+        }
+        return p as never;
+      },
       // 예전 저장본에 없는 설정은 기본값으로 채웁니다.
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<PuzzleState>;
@@ -259,7 +392,7 @@ export const usePuzzleStore = create<PuzzleState>()(
       },
       // 되돌리기 기록은 저장하지 않아도 이어 하기에 문제없어 용량을 아낍니다.
       partialize: (s) => ({
-        clearedLevel: s.clearedLevel,
+        sudokuCleared: s.sudokuCleared,
         bestSeconds: s.bestSeconds,
         settings: s.settings,
         chosenDifficulty: s.chosenDifficulty,
@@ -274,6 +407,14 @@ export const usePuzzleStore = create<PuzzleState>()(
         blockGame: s.blockGame ? { ...s.blockGame, history: [] } : null,
         nonogramCleared: s.nonogramCleared,
         escapeBest: s.escapeBest,
+        hints: s.hints,
+        dailyDate: s.dailyDate,
+        dailySudoku: s.dailySudoku ? { ...s.dailySudoku, history: [], selected: null } : null,
+        dailyZone: s.dailyZone ? { ...s.dailyZone, history: [] } : null,
+        dailyBlocks: s.dailyBlocks ? { ...s.dailyBlocks, history: [] } : null,
+        dailySlide: s.dailySlide ? { ...s.dailySlide, history: [] } : null,
+        dailyDone: s.dailyDone,
+        dailyDays: s.dailyDays,
         game: s.game ? { ...s.game, history: [], selected: null } : null,
       }),
     },

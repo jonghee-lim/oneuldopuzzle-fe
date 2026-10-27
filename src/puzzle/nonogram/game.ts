@@ -66,3 +66,32 @@ export function colDone(game: NonogramGame, c: number): boolean {
   const line = Array.from({ length: game.height }, (_, r) => (game.cells[r * game.width + c] === 1 ? 1 : 0));
   return sameClue(lineClue(line), game.clues.cols[c]);
 }
+
+/** 힌트: 잘못 칠한 칸이 있으면 X로 바꾸고(remove), 없으면 칠해야 하는 칸 하나를 칠합니다. 이미 많이 맞춘 줄부터 채웁니다. */
+export interface NonogramHint {
+  index: number;
+  remove: boolean;
+}
+
+export function findNonogramHint(game: NonogramGame): NonogramHint | null {
+  if (game.solved) return null;
+  const wrong = game.cells.findIndex((v, i) => v === 1 && game.solution[i] !== 1);
+  if (wrong >= 0) return { index: wrong, remove: true };
+  let best: number | null = null;
+  let bestDone = -1;
+  for (let r = 0; r < game.height; r += 1) {
+    const row = Array.from({ length: game.width }, (_, c) => r * game.width + c);
+    const missing = row.filter((i) => game.solution[i] === 1 && game.cells[i] !== 1);
+    if (!missing.length) continue;
+    const done = row.filter((i) => game.solution[i] === 1 && game.cells[i] === 1).length;
+    if (done > bestDone) [best, bestDone] = [missing[0], done];
+  }
+  return best === null ? null : { index: best, remove: false };
+}
+
+export function applyNonogramHint(game: NonogramGame, hint: NonogramHint): NonogramGame {
+  const cells = game.cells.slice();
+  cells[hint.index] = hint.remove ? 2 : 1;
+  const solved = cells.every((v, i) => (v === 1) === (game.solution[i] === 1));
+  return { ...game, cells, history: pushHistory(game.history, game.cells), solved };
+}
