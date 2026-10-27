@@ -10,6 +10,8 @@ export interface EscapeGame {
   moves: number;
   history: History<Block[]>;
   escaped: boolean;
+  /** 힌트를 쓴 판(별 하나를 받지 못함) */
+  usedHint?: boolean;
 }
 
 export function newEscapeGame(board: string): EscapeGame {
@@ -61,7 +63,7 @@ export function undoEscape(game: EscapeGame): EscapeGame {
 }
 
 export function restartEscape(game: EscapeGame): EscapeGame {
-  return { ...game, blocks: game.start, selected: null, moves: 0, history: [], escaped: false };
+  return { ...game, blocks: game.start, selected: null, moves: 0, history: [], escaped: false, usedHint: false };
 }
 
 /** 블록을 쓸어 옮기기: 쓴 칸 수만큼(최소 1칸) 그 방향으로, 막히면 갈 수 있는 데까지 갑니다. */
@@ -89,5 +91,5 @@ export function findEscapeHint(game: EscapeGame): [string, number] | null {
 export function applyEscapeHint(game: EscapeGame, [id, pos]: [string, number]): EscapeGame {
   const blocks = moveBlock(game.blocks, id, pos);
   const escaped = isEscaped(blocks);
-  return { ...game, blocks, moves: game.moves + 1, history: pushHistory(game.history, game.blocks), escaped, selected: escaped ? null : id };
+  return { ...game, blocks, moves: game.moves + 1, history: pushHistory(game.history, game.blocks), escaped, selected: escaped ? null : id, usedHint: true };
 }

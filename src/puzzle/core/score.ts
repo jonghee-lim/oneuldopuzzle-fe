@@ -1,60 +1,8 @@
-// 점수 규칙. 설계서: 스페셜 스테이지는 점수를 많이 준다. 화면과 떨어진 순수 함수라 단위 테스트로 고정합니다.
+// 별·힌트 규칙. 화면과 떨어진 순수 함수라 단위 테스트로 고정합니다.
 import type { SudokuDifficulty } from "../sudoku/generator.ts";
 
-export const SUDOKU_POINTS: Record<SudokuDifficulty, number> = { easy: 10, normal: 20, hard: 40, expert: 80 };
-
-/** 난이도별 기준 시간(초). 이보다 빨리 풀면 빠르기 점수를 더 줍니다. */
+/** 난이도별 기준 시간(초). 이보다 빨리 풀면 별 하나를 더 줍니다. */
 export const SUDOKU_PAR_SECONDS: Record<SudokuDifficulty, number> = { easy: 300, normal: 540, hard: 900, expert: 1500 };
-
-export interface ScoreLine {
-  label: string;
-  points: number;
-}
-
-/** 스도쿠 한 판: 난이도 점수 + 기준 시간보다 빠르면 절반 더 + 틀린 칸 보기를 안 썼으면 깔끔 점수 */
-export function sudokuScore(difficulty: SudokuDifficulty, seconds: number, usedCheck: boolean): ScoreLine[] {
-  const base = SUDOKU_POINTS[difficulty];
-  const lines: ScoreLine[] = [{ label: "완성", points: base }];
-  if (seconds <= SUDOKU_PAR_SECONDS[difficulty]) lines.push({ label: "빠르게", points: Math.round(base / 2) });
-  if (!usedCheck) lines.push({ label: "도움 없이", points: Math.round(base / 5) });
-  return lines;
-}
-
-/** 색깔 구역 한 판: 판 크기가 클수록 */
-export function zoneScore(size: number, seconds: number): ScoreLine[] {
-  const base = size * 3;
-  const lines: ScoreLine[] = [{ label: "완성", points: base }];
-  if (seconds <= size * size * 3) lines.push({ label: "빠르게", points: Math.round(base / 2) });
-  return lines;
-}
-
-/** 슬라이딩: 판 크기 점수 + 최소 수로 풀면 절반 더(3×3만 최소 수를 압니다) */
-export function slideScore(size: number, moves: number, minMoves: number | null): ScoreLine[] {
-  const base = size * 4;
-  const lines: ScoreLine[] = [{ label: "완성", points: base }];
-  if (minMoves !== null && moves <= minMoves) lines.push({ label: "최소 수", points: Math.round(base / 2) });
-  return lines;
-}
-
-/** 블록 채우기: 판 크기 점수 + 빠르면 절반 더 */
-export function blockScore(size: number, seconds: number): ScoreLine[] {
-  const base = size * 3;
-  const lines: ScoreLine[] = [{ label: "완성", points: base }];
-  if (seconds <= size * size * 4) lines.push({ label: "빠르게", points: Math.round(base / 2) });
-  return lines;
-}
-
-/** 스페셜: 처음 풀 때 100점, 블록 탈출은 최소 수로 풀면 50점 더(처음 한 번씩) */
-export function specialScore(firstClear: boolean, perfectFirst: boolean): ScoreLine[] {
-  const lines: ScoreLine[] = [];
-  if (firstClear) lines.push({ label: "스페셜 완성", points: 100 });
-  if (perfectFirst) lines.push({ label: "최소 수", points: 50 });
-  return lines;
-}
-
-export function total(lines: readonly ScoreLine[]): number {
-  return lines.reduce((sum, l) => sum + l.points, 0);
-}
 
 /** 힌트: 처음 3개, 오늘의 퍼즐 한 판마다 1개, 세 판을 다 풀면 2개 더 */
 export const HINT_START = 3;
@@ -64,4 +12,69 @@ export const HINT_DAILY_BONUS = 2;
 /** 오늘의 퍼즐 한 판을 풀었을 때 받는 힌트 수(세 판째면 보너스까지) */
 export function dailyHintReward(doneBefore: number, total: number): number {
   return HINT_PER_DAILY + (doneBefore + 1 === total ? HINT_DAILY_BONUS : 0);
+}
+
+/**
+ * 레벨 별(2026-10-26 사용자 결정: 점수 대신 별과 디저트). 한 판에 별 3개까지: 완성 1개 + 아래 두 조건마다 1개.
+ * 같은 레벨을 다시 풀면 가장 많이 받은 별을 남깁니다.
+ */
+export interface StarLine {
+  label: string;
+  got: boolean;
+}
+
+export function starCount(lines: readonly StarLine[]): number {
+  return lines.filter((l) => l.got).length;
+}
+
+export function sudokuStars(difficulty: SudokuDifficulty, seconds: number, helped: boolean): StarLine[] {
+  return [
+    { label: "완성", got: true },
+    { label: `${Math.round(SUDOKU_PAR_SECONDS[difficulty] / 60)}분 안에`, got: seconds <= SUDOKU_PAR_SECONDS[difficulty] },
+    { label: "도움 없이", got: !helped },
+  ];
+}
+
+export function zoneStars(size: number, seconds: number, helped: boolean): StarLine[] {
+  const par = size * size * 3;
+  return [
+    { label: "완성", got: true },
+    { label: `${Math.ceil(par / 60)}분 안에`, got: seconds <= par },
+    { label: "힌트 없이", got: !helped },
+  ];
+}
+
+export function blockStars(size: number, seconds: number, helped: boolean): StarLine[] {
+  const par = size * size * 4;
+  return [
+    { label: "완성", got: true },
+    { label: `${Math.ceil(par / 60)}분 안에`, got: seconds <= par },
+    { label: "힌트 없이", got: !helped },
+  ];
+}
+
+/** 슬라이딩: 3×3은 최소 수, 4×4는 최소 수를 모르므로 3분 안에 */
+export function slideStars(moves: number, minMoves: number | null, seconds: number, helped: boolean): StarLine[] {
+  return [
+    { label: "완성", got: true },
+    minMoves !== null ? { label: `최소 ${minMoves}수`, got: moves <= minMoves } : { label: "3분 안에", got: seconds <= 180 },
+    { label: "힌트 없이", got: !helped },
+  ];
+}
+
+/** 노노그램: 시간을 재지 않아 잘못 칠한 칸 없이(X는 괜찮음) */
+export function nonogramStars(mistakes: number, helped: boolean): StarLine[] {
+  return [
+    { label: "완성", got: true },
+    { label: "잘못 칠하지 않고", got: mistakes === 0 },
+    { label: "힌트 없이", got: !helped },
+  ];
+}
+
+export function escapeStars(moves: number, minMoves: number, helped: boolean): StarLine[] {
+  return [
+    { label: "완성", got: true },
+    { label: `최소 ${minMoves}수`, got: moves <= minMoves },
+    { label: "힌트 없이", got: !helped },
+  ];
 }

@@ -13,6 +13,8 @@ export interface ZoneGame {
   history: History<number[]>;
   elapsedSeconds: number;
   solved: boolean;
+  /** 힌트를 쓴 판(별 하나를 받지 못함) */
+  usedHint?: boolean;
 }
 
 export function newZoneGame(level: number, puzzle: ZonePuzzle): ZoneGame {
@@ -78,5 +80,5 @@ export function applyZoneHint(game: ZoneGame, hint: ZoneHint): ZoneGame {
   cells[hint.index] = hint.remove ? 0 : 2;
   const { size, regions } = game.puzzle;
   const solved = isZoneSolved(size, regions, cells.flatMap((v, i) => (v === 2 ? [i] : [])));
-  return { ...game, cells, history: pushHistory(game.history, game.cells), solved };
+  return { ...game, cells, history: pushHistory(game.history, game.cells), solved, usedHint: true };
 }

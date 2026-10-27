@@ -37,13 +37,13 @@ function NonogramStage({ stage, onStage }: { stage: number; onStage: (stage: num
   const clueSize = width > 5 ? 13 : 16;
   const cleared = usePuzzleStore((s) => s.nonogramCleared);
   const clearNonogram = usePuzzleStore((s) => s.clearNonogram);
-  const lastScore = usePuzzleStore((s) => s.lastScore);
+  const lastStars = usePuzzleStore((s) => s.lastStars);
   useEffect(() => {
     if (game.solved) {
-      clearNonogram(stage);
+      clearNonogram(stage, game.mistakes ?? 0, !!game.usedHint);
       cue("clear");
     }
-  }, [game.solved, stage, clearNonogram]);
+  }, [game.solved, game.mistakes, game.usedHint, stage, clearNonogram]);
 
   return (
     <Page>
@@ -165,7 +165,7 @@ function NonogramStage({ stage, onStage }: { stage: number; onStage: (stage: num
         title={`${picture.name} 완성!`}
         detail="스페셜 노노그램을 풀었어요."
         nextLabel="다음 단계"
-        score={lastScore}
+        stars={lastStars}
         onNext={stage < NONOGRAMS.length - 1 ? () => onStage(stage + 1) : undefined}
       />
       {hint.toast}

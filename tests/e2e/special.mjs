@@ -123,7 +123,7 @@ while (minSlides(board, 3) > 0) {
   board = slideFrom(board, 3, i);
 }
 await page.getByRole("heading", { name: "레벨 1 완성!" }).waitFor();
-await page.getByText("최소 수 +6").waitFor();
+await page.getByRole("img", { name: "별 3개" }).waitFor();
 if (shots) await page.screenshot({ path: `${shots}/s10-sliding-clear.png` });
 
 // 블록 채우기: 블록을 고르고 답의 기준 칸을 누르기, 엉뚱한 자리는 막힘 안내
@@ -142,7 +142,7 @@ for (let k = 0; k < anchors.length; k += 1) {
 await page.getByRole("heading", { name: "레벨 1 완성!" }).waitFor();
 if (shots) await page.screenshot({ path: `${shots}/s12-blocks-clear.png` });
 
-// 점수표: 스페셜·보너스 기록
+// 기록표: 스페셜·보너스 기록과 별
 await page.goto(`${BASE}/records`);
 const st = await page.evaluate(() => JSON.parse(localStorage.getItem("oneuldopuzzle-v1")).state);
 assert.equal(st.zoneCleared, 1);
@@ -150,10 +150,24 @@ assert.equal(st.slideCleared, 1);
 assert.equal(st.blockCleared, 1);
 assert.deepEqual(st.nonogramCleared, [0]);
 assert.ok(st.escapeBest[0] >= ESCAPES[0].minMoves);
-assert.ok(st.score >= 250);
+for (const k of ["zones:1", "sliding:1", "blocks:1", "nonogram:0", "escape:0"]) assert.ok(st.stars[k] >= 1, k);
 if (shots) await page.screenshot({ path: `${shots}/s7-records.png`, fullPage: true });
 await page.goto(BASE);
 if (shots) await page.screenshot({ path: `${shots}/s8-home-after.png`, fullPage: true });
+
+// 예전 저장본(버전 2, 점수)은 깬 레벨마다 별 1개로 옮긴다
+await page.evaluate(() =>
+  localStorage.setItem(
+    "oneuldopuzzle-v1",
+    JSON.stringify({ version: 2, state: { score: 300, sudokuCleared: { easy: 2 }, zoneCleared: 1, nonogramCleared: [0], escapeBest: { 1: 9 } } }),
+  ),
+);
+await page.goto(`${BASE}/desserts`);
+await page.getByRole("heading", { name: "디저트 도감" }).waitFor();
+const migrated = await page.evaluate(() => JSON.parse(localStorage.getItem("oneuldopuzzle-v1")));
+assert.equal(migrated.version, 3);
+assert.deepEqual(migrated.state.stars, { "sudoku:easy:1": 1, "sudoku:easy:2": 1, "zones:1": 1, "nonogram:0": 1, "escape:1": 1 });
+assert.equal(migrated.state.score, undefined);
 
 assert.deepEqual(errors, []);
 await browser.close();

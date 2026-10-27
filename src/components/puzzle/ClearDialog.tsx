@@ -1,13 +1,13 @@
 import { Box, Button, Dialog, Typography } from "@mui/material";
 import type { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
-import type { ScoreLine } from "../../puzzle/core/score";
+import type { StarLine } from "../../puzzle/core/score";
 import { dessert } from "../../theme/palette";
 import { popIn } from "../../theme/motion";
-import ScoreChips from "./ScoreChips";
+import StarChips from "./StarChips";
 
 /** 다 풀었을 때 창 */
-export default function ClearDialog({ open, art, title, detail, nextLabel, onNext, score = null }: { open: boolean; art: ReactNode; title: string; detail: string; nextLabel?: string; onNext?: () => void; score?: readonly ScoreLine[] | null }) {
+export default function ClearDialog({ open, art, title, detail, nextLabel, onNext, stars = null }: { open: boolean; art: ReactNode; title: string; detail: string; nextLabel?: string; onNext?: () => void; stars?: readonly StarLine[] | null }) {
   const navigate = useNavigate();
   return (
     <Dialog open={open} slotProps={{ paper: { sx: { width: "min(360px, calc(100% - 32px))", p: 3, textAlign: "center", bgcolor: dessert.cream } } }}>
@@ -16,7 +16,7 @@ export default function ClearDialog({ open, art, title, detail, nextLabel, onNex
         {title}
       </Typography>
       <Typography sx={{ color: "text.secondary", mt: 0.5 }}>{detail}</Typography>
-      <ScoreChips lines={score} />
+      <StarChips lines={stars} />
       {onNext && (
         <Button variant="contained" size="large" fullWidth onClick={onNext} sx={{ mt: 3, height: 52 }}>
           {nextLabel}
