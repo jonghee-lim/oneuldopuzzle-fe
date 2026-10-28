@@ -1,4 +1,4 @@
-package com.smartinfolab.oneuldopuzzle;
+package com.smartinfol.oneuldopuzzle;
 
 import com.getcapacitor.BridgeActivity;
 

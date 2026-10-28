@@ -2,6 +2,6 @@
 <resources>
     <string name="app_name">오늘Do퍼즐</string>
     <string name="title_activity_main">오늘Do퍼즐</string>
-    <string name="package_name">com.smartinfolab.oneuldopuzzle</string>
-    <string name="custom_url_scheme">com.smartinfolab.oneuldopuzzle</string>
+    <string name="package_name">com.smartinfol.oneuldopuzzle</string>
+    <string name="custom_url_scheme">com.smartinfol.oneuldopuzzle</string>
 </resources>
