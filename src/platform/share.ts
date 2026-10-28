@@ -1,5 +1,5 @@
 // 공유하기: 휴대폰 공유 창(카톡 등)을 열고, 공유 창이 없으면 글을 복사합니다.
-export const APP_URL = "https://oneuldopuzzle-fe.vercel.app";
+export const APP_URL = "https://oneuldopuzzle.smartinfol.com";
 /** 이용안내·개인정보 처리방침의 문의 주소(형제 앱 공통) */
 export const SUPPORT_EMAIL = "support@smartinfol.com";
 

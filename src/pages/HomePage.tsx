@@ -1,3 +1,4 @@
+import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import { TIER_INFO, tierResume } from "../components/tier/tierInfo";
 import { TIER_ROUTE } from "../components/tier/tierRoutes";
@@ -11,6 +12,8 @@ import StarIcon from "../components/dessert/StarIcon";
 import PuzzleThumb from "../components/home/PuzzleThumb";
 import AppHeader from "../components/layout/AppHeader";
 import Page from "../components/layout/Page";
+import { storePlatform } from "../platform/native";
+import { otherAppsFor } from "../platform/otherApps";
 import { totalStarsOf } from "../puzzle/core/collection";
 import { DIFFICULTY_LABEL } from "../puzzle/sudoku/generator";
 import { hasProgress } from "../puzzle/sudoku/game";
@@ -72,12 +75,8 @@ export default function HomePage() {
             <TierTile key={puzzle} puzzle={puzzle} />
           ))}
         </Box>
-        {/* 내 다른 앱은 메뉴 링크로만 알립니다(배너·끝 창 추천 없음, 2026-10-28 사용자 결정). */}
-        <Box sx={{ display: "flex", justifyContent: "center", mt: 3 }}>
-          <ButtonBase component={Link} to="/apps" sx={{ px: 1.5, py: 1, borderRadius: radius.pill, fontSize: 13, color: dessert.cocoaSoft, textDecoration: "underline", textUnderlineOffset: "3px" }}>
-            스마트인포랩의 다른 앱
-          </ButtonBase>
-        </Box>
+        {/* 내 다른 앱은 메뉴 줄 모양의 링크로만 알립니다(배너·끝 창 추천 없음, 2026-10-28 사용자 결정). */}
+        <OtherAppsRow />
       </Box>
     </Page>
   );
@@ -142,5 +141,26 @@ function Chip({ label, color }: { label: string; color: string }) {
     <Box component="span" sx={{ px: 0.75, py: "1px", borderRadius: radius.pill, bgcolor: color, color: "#FFFFFF", fontSize: 11, fontWeight: 800, letterSpacing: "0.02em" }}>
       {label}
     </Box>
+  );
+}
+
+/** 다른 앱 화면으로 가는 줄: 그 기기에서 열 수 있는 앱 아이콘을 작게 겹쳐 보여 줍니다. */
+function OtherAppsRow() {
+  const apps = otherAppsFor(storePlatform());
+  if (!apps.length) return null;
+  return (
+    <ButtonBase
+      component={Link}
+      to="/apps"
+      sx={{ display: "flex", width: "100%", alignItems: "center", gap: 1.5, mt: 2, px: 2, minHeight: 60, borderRadius: radius.item, bgcolor: dessert.paper, color: "inherit", justifyContent: "flex-start" }}
+    >
+      <Box sx={{ display: "flex", flexShrink: 0 }}>
+        {apps.map(({ app }, i) => (
+          <Box key={app.id} component="img" src={app.icon} alt="" sx={{ width: 30, height: 30, borderRadius: "8px", border: `2px solid ${dessert.paper}`, ml: i ? -1 : 0 }} />
+        ))}
+      </Box>
+      <Typography sx={{ flex: 1, fontSize: 15, fontWeight: 700, textAlign: "left" }}>스마트인포랩의 다른 앱</Typography>
+      <ChevronRightIcon fontSize="small" sx={{ color: dessert.cocoaSoft }} />
+    </ButtonBase>
   );
 }
