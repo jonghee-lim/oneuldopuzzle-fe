@@ -9,7 +9,7 @@ const BASE = process.env.BASE_URL || "http://localhost:4180";
 const shots = process.argv[2];
 
 const browser = await chromium.launch(process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH, args: ["--no-sandbox"] } : {});
-const ROUTES = ["/", "/sudoku", "/play", "/play?daily", "/zones", "/blocks", "/sliding", "/special/nonogram", "/special/escape", "/levels/zones", "/levels/sliding", "/levels/escape", "/records", "/settings"];
+const ROUTES = ["/", "/sudoku", "/play", "/play?daily", "/zones", "/blocks", "/sliding", "/special/nonogram", "/special/escape", "/levels/zones", "/levels/sliding", "/levels/escape", "/records", "/settings", "/apps", "/guide", "/privacy"];
 const problems = [];
 
 for (const width of [320, 360]) {

@@ -3,9 +3,12 @@ import { Navigate, Route, Routes, useNavigate } from "react-router-dom";
 import { setupNative } from "./platform/native";
 import BlocksPage from "./pages/BlocksPage";
 import EscapePage from "./pages/EscapePage";
+import GuidePage from "./pages/GuidePage";
 import HomePage from "./pages/HomePage";
 import NonogramPage from "./pages/NonogramPage";
+import OtherAppsPage from "./pages/OtherAppsPage";
 import PlayPage from "./pages/PlayPage";
+import PrivacyPage from "./pages/PrivacyPage";
 import RecordsPage from "./pages/RecordsPage";
 import SettingsPage from "./pages/SettingsPage";
 import SlidingPage from "./pages/SlidingPage";
@@ -36,6 +39,9 @@ export default function App() {
       <Route path="/sliding" element={<SlidingPage />} />
       <Route path="/blocks" element={<BlocksPage />} />
       <Route path="/records" element={<RecordsPage />} />
+      <Route path="/apps" element={<OtherAppsPage />} />
+      <Route path="/guide" element={<GuidePage />} />
+      <Route path="/privacy" element={<PrivacyPage />} />
       <Route path="/special/nonogram" element={<NonogramPage />} />
       <Route path="/special/escape" element={<EscapePage />} />
       <Route path="/levels/zones" element={<TierPage puzzle="zones" />} />

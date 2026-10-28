@@ -1,1 +1,24 @@
-AGENTS.md
+# 오늘Do퍼즐 작업 지침
+
+- 사용자와는 한국어로 소통한다. 공통 지침은 스마트인포랩 워크스페이스 AI 지침(공통 + 앱 ONEULDOPUZZLE)을 따른다.
+- 스택은 형제 앱 표준(Vite + React + TypeScript + MUI, 설치형 앱은 Capacitor). 기준 앱은 달 리듬, 공유 패키지는 `@smartinfolab/app-core`(vendor tgz).
+- 앱 ID(iOS 번들 ID·안드로이드 패키지)는 형제 앱과 같은 규칙으로 `com.smartinfol.oneuldopuzzle`(2026-10-28 사용자 결정). 스토어에 올린 뒤에는 바꾸지 않는다.
+- 설계 원칙(설계서 2026-10-25): 터치 중심(끌어다 놓기 없음, 단 블록 탈출·슬라이딩은 2026-10-26 사용자 요청으로 쓸기도 받음 — `useSwipe`), 답이 정확히 하나인 문제만 내보냄, 강제 광고 없음, 알림 기본 꺼짐, 메모는 작게 숨기고 숫자 패드는 크게.
+- 퍼즐 규칙·생성·검사는 `src/puzzle/<퍼즐>`의 순수 함수로 두고 단위 테스트(`tests/*.test.ts`)로 확인한다. 화면은 `PuzzleBoard`를 함께 쓴다(칸마다 aspect-ratio로 정사각형, 판에 aspect-ratio를 주면 iOS Safari에서 줄 높이가 들쭉날쭉해짐, 2026-10-27).
+- 문제를 바꾸면 `npm test`와 `npm run check:pool -- 1000`을 함께 돌린다. 화면을 바꾸면 `npm run test:e2e`(320px 좁은 화면에서 가로로 넘치지 않는지도 `narrow.mjs`가 본다: 넘치면 iOS가 화면을 줄였다 키워 판이 커졌다 작아져 보임, 2026-10-27 신고). 상태에 따라 버튼 이름 길이를 바꾸지 않는다.
+- 화면·컴포넌트는 공유 패키지를 직접 import하지 않고 `src/theme` 같은 얇은 파일을 거친다(eslint로 막음).
+- 별 규칙은 `src/puzzle/core/score.ts` 한 곳(레벨마다 완성 1 + 조건 2개, 테스트 `tests/score.test.ts`), 별 합계는 `src/puzzle/core/collection.ts`(디저트 도감은 2026-10-27 사용자 결정으로 없앰), 판마다 시간 기록·최고 기록은 `src/puzzle/core/record.ts`(테스트 `tests/record.test.ts`, 화면 `/records`에 연속 출석 달력과 최근 기록 흐름), 효과음·진동은 `src/platform/feedback.ts`의 `cue()`로만 낸다(설정에서 끌 수 있음, 기본 켜짐).
+- 스도쿠 난이도는 푸는 기술로 매긴다(`src/puzzle/sudoku/techniques.ts`, 2026-10-27): 쉬움·보통은 단서 찾기만(예전 판 그대로), 어려움은 한 줄 몰림·짝 숫자가, 아주 어려움은 세 칸 묶음·X날개·XY날개·황새치가 꼭 필요하고 모두 찍지 않고 풀린다(`check:pool`이 확인). 힌트는 단서로 못 찾으면 그 기술을 판에 비춰 가르친다(`reason: "technique"`).
+- 스도쿠 미니 6×6(난이도 `mini`, 상자 가로 3×세로 2, 2026-10-27)은 입문용으로 `/sudoku`에서 따로 한 줄로 고른다. 판 모양은 `rules.ts`의 `shapeOf(판)`(길이 36이면 미니)로 가르고, 풀이·검사·힌트·화면이 모두 이를 따른다.
+- 퍼즐마다 '하는 법'(`src/components/guide/guides.ts`, 2026-10-27 노노그램 '1 1'을 모르겠다는 신고): 한 단계에 한 가지와 작은 예시 판. 풀이 화면을 처음 열 때 한 번 저절로 뜨고(`useGuide`, 본 기록은 `oneuldopuzzle-guide-seen`), 머리 줄 '?'로 다시 본다. e2e는 이미 본 것으로 두고 `special.mjs`가 따로 확인한다.
+- 스도쿠 메모를 켜면 '자동 메모'(`autoNotes`, 도움으로 세지 않음)를 쓸 수 있다. 색깔 구역·노노그램의 '막힌 칸 자동 X'(설정 `autoCross`, 기본 켜짐)는 저장하지 않고 화면에서만 흐린 X로 그린다(`blockedZoneCells`, 노노그램은 단서를 다 채운 줄).
+- 내가 넣은 숫자는 민트, 빨강은 겹친 숫자·'틀린 칸 보기'에만 쓴다. 이어 하기 판단은 시간이 아니라 넣은 숫자·메모로 한다(`hasProgress`).
+- 색깔 구역 퍼즐(`src/puzzle/zones`)은 레벨 번호로 만들고 답 하나 + 찍지 않고 풀리는 판만 쓴다. 레벨 1~120은 단위 테스트가 검사한다.
+- 노노그램(`src/puzzle/nonogram/generator.ts`)과 블록 탈출(`src/puzzle/escape/levels.ts`)도 끝없는 레벨이다(2026-10-27 사용자 결정, 저장본 버전 4에서 예전 3단계를 옮김). 노노그램은 좌우 대칭 무늬를 레벨 번호로 만들고 답 하나 + 줄 풀기만으로 풀리는 판만 쓰며, 정해 둔 레벨(`PICTURE_LEVELS`)에 손으로 그린 그림을 둔다. 블록 탈출은 `tools/make-escape-pool.ts`(언덕 오르기)로 모은 판에서 `tools/pick-escape-levels.ts`가 최소 이동 수가 늘게 고른 표(`table.ts`, 손으로 고치지 않음)를 쓰고, 표가 끝나면 끝쪽 60판을 돌린다.
+- 슬라이딩(`src/puzzle/sliding`)은 3×3 최소 수 표로 레벨마다 최소 수가 1씩 늘게 고르고, 블록 채우기(`src/puzzle/blocks`)는 블록을 돌리지 않으며 채우는 방법이 하나뿐인 판만 쓴다.
+- 첫 화면은 여섯 퍼즐을 같은 크기 카드로 고르는 화면이고(2026-10-26 사용자 결정), 스도쿠는 `/sudoku`에서 난이도를 고른다. 스도쿠 레벨은 난이도마다 따로 이어진다(`sudokuCleared`, 저장본 버전 2에서 옮김).
+- 나머지 다섯 퍼즐도 스도쿠처럼 난이도(쉬움·보통·어려움, `src/puzzle/core/tier.ts`)를 `/levels/<퍼즐>`(`TierPage`)에서 고르고 레벨은 난이도마다 따로 이어진다(2026-10-27 사용자 결정, `tierCleared`·`tierChosen`·`tierPaused`, 저장본 버전 5에서 예전 진행을 쉬움으로 옮김). 생성기는 `xForLevel(level, tier)`, 쉬움은 예전 씨앗·별 키를 그대로 쓴다. 판 크기: 색깔 구역 5·6/7/8, 블록 채우기 4/5/6(7×7은 답 하나인 판을 못 만듦), 노노그램 5/7/10, 슬라이딩 3×3 짧게/3×3 길게(20수까지)/4×4, 블록 탈출은 최소 수 10까지/11~18/19부터.
+- 점수(트로피)는 없애고 레벨 별 1~3개로 바꿨다(2026-10-26, 저장본 버전 3에서 깬 레벨마다 별 1개로 옮김). 디저트 모으기·도감은 재미가 없다는 사용자 판단으로 없앴다(2026-10-27). 곁가지(수집·꾸미기) 말고 퍼즐 자체의 재미(배우는 힌트, 내 기록이 느는 것, 연속 출석)에 집중한다. 퍼즐 안 디저트 조각 그림은 남김.
+- 힌트는 퍼즐마다 순수 함수(`findHint`·`findZoneHint`·`findBlockHint`·`slideHint`·`findNonogramHint`·`findEscapeHint`, 테스트 `tests/hint.test.ts`): 틀린 곳이 있으면 그곳부터 고치고, 없으면 다음 한 수. 힌트는 단계로 가르친다(`src/puzzle/core/hint.ts`의 `HintStep`, 퍼즐마다 `…HintSteps`): 누를 때마다 볼 곳 → 이유를 판에 비추고(힌트를 쓰지 않음), 그다음 누르면 대신 해 주며 1개를 쓴다. 화면은 `useHint(판 내용 문자열, 한 변 칸 수)`와 `PuzzleBoard`의 `focus`. 힌트 수·보상은 `score.ts`(처음 3개, 오늘의 퍼즐 한 판 1개, 세 판 다 풀면 2개 더).
+- 오늘의 퍼즐(`src/puzzle/core/daily.ts`, 테스트 `tests/daily.test.ts`)은 날짜로 고른 세 판(스도쿠·색깔 구역·블록 채우기/슬라이딩 번갈아)이고 레벨 진행과 따로다. 화면은 같은 퍼즐 화면에 `?daily`를 붙여 연다. 세 판을 다 푼 날로 연속 출석을 센다. 누구에게나 같은 판이라 결과를 공유한다(`src/puzzle/core/share.ts`의 회차·결과 글, 테스트 `tests/share.test.ts`; 카드 그림 `components/daily/shareCard.ts`, 버튼 `DailyShare`; 휴대폰 공유 창이 없으면 글 복사, `src/platform/share.ts`). 카드·글에 답은 넣지 않는다. 누구에게나 같은 판이라 결과를 공유한다(`src/puzzle/core/share.ts`의 회차·결과 글, 테스트 `tests/share.test.ts`; 카드 그림 `components/daily/shareCard.ts`, 버튼 `DailyShare`; 휴대폰 공유 창이 없으면 글 복사, `src/platform/share.ts`). 카드·글에 답은 넣지 않는다.
+- 출시는 iOS App Store 먼저(2026-10-28, 안드로이드는 Play 세금·통신판매업 정보 때문에 보류). 스토어용 화면은 `/privacy`(개인정보 처리방침)·`/guide`(이용안내, 지원 URL), 문의는 `SUPPORT_EMAIL`. 내 다른 앱은 처음 화면 맨 아래·설정의 링크로 여는 `/apps`에서만 알린다(배너·끝 창 추천 없음: Google Play '광고 포함'을 피함). 목록과 환경별 주소는 `src/platform/otherApps.ts` 한 곳(iOS 앱은 App Store만, 안드로이드 앱은 Play만, 테스트 `tests/otherApps.test.ts`).

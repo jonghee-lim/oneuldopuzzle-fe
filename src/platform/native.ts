@@ -1,8 +1,15 @@
 // 설치형 앱(Capacitor)에서만 하는 일: 안드로이드 뒤로 가기 버튼, 상태 표시줄 색, 시작 화면 닫기, 기기 진동.
 // 웹에서는 아무것도 하지 않고 플러그인도 불러오지 않습니다.
-import { isNativeApp } from "@smartinfolab/app-core/runtime";
+import { isIosApp, isNativeApp } from "@smartinfolab/app-core/runtime";
+import type { StorePlatform } from "./otherApps";
 
 export { isNativeApp };
+
+/** 스토어 링크를 고를 실행 환경: iOS 앱, 안드로이드 앱, 그 밖(웹·웹앱)은 web. */
+export function storePlatform(): StorePlatform {
+  if (!isNativeApp()) return "web";
+  return isIosApp() ? "ios" : "android";
+}
 
 /** 앱이 처음 그려진 뒤 한 번 부릅니다. goBack은 앱 안에서 한 칸 뒤로, 처음 화면이면 false를 돌려줍니다. */
 export async function setupNative(goBack: () => boolean) {
