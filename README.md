@@ -1,7 +1,7 @@
 # 오늘Do퍼즐 (oneuldopuzzle-fe)
 
 스도쿠를 중심으로 여러 두뇌 퍼즐을 모은 앱의 프런트엔드. 파스텔 색감, 드래그 없는 터치 조작.
-서버는 공용 API(`smartinfolab-api`)를 씁니다. 웹: https://oneuldopuzzle-fe.vercel.app
+서버는 공용 API(`smartinfolab-api`)를 씁니다. 웹: https://oneuldopuzzle.smartinfol.com
 
 ## 지금 들어 있는 것 (개발 1단계)
 
