@@ -72,6 +72,12 @@ export default function HomePage() {
             <TierTile key={puzzle} puzzle={puzzle} />
           ))}
         </Box>
+        {/* 내 다른 앱은 메뉴 링크로만 알립니다(배너·끝 창 추천 없음, 2026-10-28 사용자 결정). */}
+        <Box sx={{ display: "flex", justifyContent: "center", mt: 3 }}>
+          <ButtonBase component={Link} to="/apps" sx={{ px: 1.5, py: 1, borderRadius: radius.pill, fontSize: 13, color: dessert.cocoaSoft, textDecoration: "underline", textUnderlineOffset: "3px" }}>
+            스마트인포랩의 다른 앱
+          </ButtonBase>
+        </Box>
       </Box>
     </Page>
   );

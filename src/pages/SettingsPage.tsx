@@ -1,7 +1,8 @@
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
-import { Box, IconButton, Switch, ToggleButton, ToggleButtonGroup, Typography } from "@mui/material";
+import ChevronRightIcon from "@mui/icons-material/ChevronRight";
+import { Box, ButtonBase, IconButton, Switch, ToggleButton, ToggleButtonGroup, Typography } from "@mui/material";
 import type { ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Page from "../components/layout/Page";
 import { usePuzzleStore } from "../stores/puzzleStore";
 import { dessert } from "../theme/palette";
@@ -52,6 +53,11 @@ export default function SettingsPage() {
           <Row label="진동" checked={settings.haptics} onChange={(v) => updateSettings({ haptics: v })} divider />
           <Typography sx={{ px: 2, pb: 1.5, fontSize: 13, color: "text.secondary" }}>진동은 지원하는 기기에서만 울립니다.</Typography>
         </Group>
+        <Group title="정보">
+          <LinkRow label="이용안내" to="/guide" />
+          <LinkRow label="개인정보 처리방침" to="/privacy" divider />
+          <LinkRow label="스마트인포랩의 다른 앱" to="/apps" divider />
+        </Group>
       </Box>
     </Page>
   );
@@ -74,5 +80,18 @@ function Row({ label, checked, onChange, divider = false }: { label: string; che
       <Typography>{label}</Typography>
       <Switch checked={checked} onChange={(e) => onChange(e.target.checked)} slotProps={{ input: { "aria-label": label } }} />
     </Box>
+  );
+}
+
+function LinkRow({ label, to, divider = false }: { label: string; to: string; divider?: boolean }) {
+  return (
+    <ButtonBase
+      component={Link}
+      to={to}
+      sx={{ display: "flex", width: "100%", alignItems: "center", justifyContent: "space-between", minHeight: 52, px: 2, borderTop: divider ? `1px solid ${dessert.creamDeep}` : "none", color: "inherit" }}
+    >
+      <Typography>{label}</Typography>
+      <ChevronRightIcon fontSize="small" sx={{ color: "text.secondary" }} />
+    </ButtonBase>
   );
 }
