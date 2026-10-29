@@ -55,6 +55,8 @@ await page.evaluate(() => {
 await page.reload();
 async function solveWithHints() {
   const dialog = page.getByRole("dialog");
+  // 앞 판의 완성 창이 닫히는 중이면 그 창을 보고 바로 끝나므로, 사라질 때까지 기다립니다.
+  await dialog.waitFor({ state: "hidden" });
   for (let n = 0; n < 900 && !(await dialog.isVisible()); n += 1) await page.getByRole("button", { name: /^힌트 \d+$/ }).tap();
   await dialog.waitFor();
 }

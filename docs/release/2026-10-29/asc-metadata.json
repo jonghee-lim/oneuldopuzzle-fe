@@ -1,0 +1,62 @@
+{
+  "_note": "오늘Do퍼즐 1.0 첫 App Store 제출용 정보. 이름·부제·키워드·설명은 사장님 컨펌 전 초안(지침 #43·#92). 컨펌 전에는 '심사를 위해 제출'을 누르지 않는다.",
+  "app": {
+    "bundleId": "com.smartinfol.oneuldopuzzle",
+    "sku": "oneuldopuzzle",
+    "primaryLocale": "ko",
+    "version": "1.0",
+    "build": "1",
+    "releaseType": "MANUAL",
+    "copyright": "2026 SmartInfoLab",
+    "primaryCategory": "GAMES",
+    "primarySubcategoryOne": "GAMES_PUZZLE",
+    "primarySubcategoryTwo": "GAMES_BOARD",
+    "price": "free",
+    "availability": "all countries and regions, including future ones",
+    "usesNonExemptEncryption": false,
+    "privacy": "Data Not Collected",
+    "contentRights": "does not contain, show, or access third-party content",
+    "ageRating": "all answers NONE / false (4+)"
+  },
+  "reviewDetail": {
+    "contactFirstName": "Jonghee",
+    "contactLastName": "Lim",
+    "contactEmail": "support@smartinfol.com",
+    "contactPhone": "(use the number already saved for the other SmartInfoLab apps)",
+    "demoAccountRequired": false,
+    "notes": "OneulDo Puzzle is an offline puzzle game with six puzzle types (Sudoku, color zones, block fill, sliding, nonogram, block escape). There is no sign-in, no account, no server, no ads and no in-app purchases. Progress, stars and records are stored only on the device.\n\nEvery puzzle has exactly one solution and can be solved by logic alone. Tap a puzzle card on the home screen to start level 1 of the Easy tier, or tap 'Today's Puzzle' for the three daily puzzles that are the same for everyone. The '?' button on a puzzle screen shows how to play, and the Hint button first highlights where to look and why, then fills in one move on the second tap.\n\nThe 'Other apps by SmartInfoLab' row at the bottom of the home screen and in Settings opens a page listing our own apps; each item opens that app's App Store page. It is not an ad network and sends no data.\n\nThe interface is in Korean. Privacy policy: https://oneuldopuzzle.smartinfol.com/privacy"
+  },
+  "urls": {
+    "support": "https://oneuldopuzzle.smartinfol.com/guide",
+    "marketing": "https://oneuldopuzzle.smartinfol.com",
+    "privacyPolicy": "https://oneuldopuzzle.smartinfol.com/privacy"
+  },
+  "localizations": {
+    "ko": {
+      "name": "오늘Do퍼즐 - 스도쿠, 노노그램",
+      "subtitle": "두뇌 트레이닝·블록 탈출·숫자 게임",
+      "keywords": "수도쿠,sudoku,넘버플레이스,네모로직,그림로직,로직,논리,뇌훈련,치매예방,브레인,두뇌게임,색칠,슬라이딩,블럭,채우기,힌트,오프라인,데일리,매일,출석,집중력,기억력,시간때우기",
+      "promotionalText": "스도쿠·노노그램·블록 탈출 등 여섯 가지 퍼즐을 레벨과 난이도별로 풉니다. 막히면 힌트가 볼 곳과 이유를 판 위에 보여 줍니다.",
+      "description": "스도쿠, 노노그램, 블록 탈출, 색깔 구역, 블록 채우기, 슬라이딩. 여섯 가지 두뇌 퍼즐을 한 앱에서 풉니다.\n모든 문제는 답이 하나뿐이고, 찍지 않고 논리로만 풀립니다.\n로그인과 광고 없이, 인터넷이 없어도 바로 풀 수 있습니다.\n\n[여섯 가지 퍼즐]\n- 스도쿠: 6×6 미니부터 쉬움·보통·어려움·아주 어려움까지. 난이도는 푸는 데 필요한 기술로 나눕니다.\n- 노노그램(네모로직): 줄마다 숫자를 보고 칸을 칠해 그림을 완성합니다.\n- 블록 탈출: 블록을 밀어 길을 만들고 딸기 블록을 출구로 보냅니다. 최소 이동 수에 도전합니다.\n- 색깔 구역: 가로줄·세로줄·색깔 구역마다 마카롱을 하나씩 놓습니다.\n- 블록 채우기: 주어진 블록으로 판을 빈틈없이 채웁니다.\n- 슬라이딩: 숫자 조각을 밀어 1부터 순서대로 맞춥니다.\n\n[레벨과 난이도]\n- 퍼즐마다 쉬움·보통·어려움을 고르면 레벨이 끝없이 이어집니다.\n- 레벨마다 완성과 두 가지 조건으로 별을 1~3개 받습니다.\n- 풀던 판은 저장되어 다음에 이어서 풉니다.\n\n[배우는 힌트]\n- 힌트를 누르면 먼저 볼 곳과 이유를 판 위에 비춰 줍니다. 한 번 더 누르면 한 수를 대신 둡니다.\n- 어려운 스도쿠는 한 줄 몰림, 짝 숫자, X날개 같은 기술을 판에 보여 주며 알려 줍니다.\n- 퍼즐마다 '하는 법'을 예시 판과 함께 볼 수 있습니다.\n\n[오늘의 퍼즐]\n- 날마다 모두에게 같은 세 판이 나옵니다. 세 판을 다 풀면 연속 출석이 이어집니다.\n- 결과는 답을 빼고 친구에게 공유할 수 있습니다.\n\n[내 기록]\n- 판마다 걸린 시간과 최고 기록, 연속 출석 달력을 기록표에서 봅니다.\n\n[편의 기능]\n- 스도쿠 메모와 자동 메모, 막힌 칸 자동 X 표시, 되돌리기.\n- 효과음과 진동(설정에서 끌 수 있음).\n\n기록은 이 기기에만 저장하며 개인정보를 모으지 않습니다.\n개인정보 처리방침: https://oneuldopuzzle.smartinfol.com/privacy\n문의: support@smartinfol.com"
+    },
+    "en-US": {
+      "name": "OneulDo Puzzle - Sudoku, Logic",
+      "subtitle": "Nonogram, Block Escape, Brain",
+      "keywords": "picross,griddler,hanjie,training,daily,offline,number,sliding,unblock,mind,iq,hint,game,relax,zen",
+      "promotionalText": "Six logic puzzles in one app: Sudoku, nonogram, block escape and more. Every puzzle has exactly one solution, and hints show where to look and why.",
+      "description": "Sudoku, nonogram, block escape, color zones, block fill and sliding puzzles. Six brain puzzles in one app.\nEvery puzzle has exactly one solution and can be solved by logic alone, without guessing.\nNo sign-in, no ads, and it works offline.\n\nThe app is currently in Korean.\n\nSIX PUZZLES\n- Sudoku: from a 6x6 mini board to Easy, Medium, Hard and Expert. Difficulty is set by the solving techniques each board needs.\n- Nonogram (picross): paint cells by the row and column clues to reveal a picture.\n- Block escape: slide blocks to clear a path for the strawberry block. Try for the fewest moves.\n- Color zones: place one macaron in every row, column and color zone.\n- Block fill: cover the board with the given pieces, no gaps.\n- Sliding: slide the number tiles into order from 1.\n\nLEVELS AND DIFFICULTY\n- Choose Easy, Medium or Hard for each puzzle and the levels keep going.\n- Earn 1 to 3 stars per level. Unfinished boards are saved.\n\nHINTS THAT TEACH\n- A hint first highlights where to look and explains why. Tap again and it makes the move for you.\n- Hard Sudoku hints show techniques such as pointing pairs, naked pairs and X-Wing on the board.\n\nTODAY'S PUZZLE\n- Three new puzzles every day, the same for everyone. Solve all three to keep your streak.\n- Share your result without the answers.\n\nYOUR RECORDS\n- Times, personal bests and a streak calendar.\n\nRecords stay on this device. No personal data is collected.\nPrivacy policy: https://oneuldopuzzle.smartinfol.com/privacy\nContact: support@smartinfol.com"
+    },
+    "ja": {
+      "name": "オヌルDoパズル - 数独・ロジック",
+      "subtitle": "お絵かきロジック・ブロック脱出",
+      "keywords": "ナンプレ,ナンバープレース,sudoku,ピクロス,イラストロジック,脳トレ,頭の体操,認知症予防,スライドパズル,数字,ブロックパズル,15パズル,オフライン,毎日,ヒント,暇つぶし,集中力",
+      "promotionalText": "数独、お絵かきロジック、ブロック脱出など6種類のパズルをレベルと難易度ごとに楽しめます。ヒントは見る場所と理由を盤面に示します。",
+      "description": "数独、お絵かきロジック、ブロック脱出、カラーゾーン、ブロック埋め、スライドパズル。6種類の脳トレパズルをひとつのアプリで。\nすべての問題は答えがひとつだけで、勘に頼らず論理だけで解けます。\nログイン不要、広告なし、オフラインでも遊べます。\n\n※アプリの表示は現在韓国語です。\n\n【6種類のパズル】\n- 数独：6×6のミニ盤から、やさしい・ふつう・むずかしい・とてもむずかしいまで。難易度は解くのに必要なテクニックで決まります。\n- お絵かきロジック（ピクロス）：数字のヒントでマスを塗り、絵を完成させます。\n- ブロック脱出：ブロックを動かして、いちごのブロックを出口へ。最小手数に挑戦します。\n- カラーゾーン：各行・各列・各色のエリアにマカロンをひとつずつ置きます。\n- ブロック埋め：与えられたブロックで盤面をすき間なく埋めます。\n- スライドパズル：数字のピースを1から順番にそろえます。\n\n【レベルと難易度】\n- パズルごとに難易度を選ぶと、レベルが続いていきます。\n- レベルごとに星を1〜3個獲得。途中の盤面は保存されます。\n\n【学べるヒント】\n- ヒントはまず見る場所と理由を盤面に示し、もう一度押すと一手を代わりに打ちます。\n\n【今日のパズル】\n- 毎日、全員に同じ3問。3問すべて解くと連続記録が続きます。\n- 答えを含まない結果をシェアできます。\n\n記録はこの端末にのみ保存され、個人情報は収集しません。\nプライバシーポリシー：https://oneuldopuzzle.smartinfol.com/privacy\nお問い合わせ：support@smartinfol.com"
+    }
+  },
+  "screenshots": {
+    "APP_IPHONE_67": "iphone/*.png (1320x2868, 6.9-inch)",
+    "APP_IPAD_PRO_3GEN_129": "ipad/*.png (2064x2752, 13-inch)",
+    "order": ["01-home", "02-sudoku-hint", "03-nonogram", "04-escape", "05-zones", "06-sliding"]
+  }
+}
