@@ -5,7 +5,7 @@ import SubHeader from "../components/layout/SubHeader";
 import { SUPPORT_EMAIL } from "../platform/share";
 import { dessert } from "../theme/palette";
 
-const EFFECTIVE = "2026-10-28";
+const EFFECTIVE = "2026-10-29";
 
 /** 개인정보 처리방침. 스토어에 적는 개인정보 처리방침 주소가 이 화면입니다(App Store·Google Play 필수). */
 export default function PrivacyPage() {
@@ -15,10 +15,13 @@ export default function PrivacyPage() {
       <Box sx={{ px: 2, pt: 1, pb: 3, display: "flex", flexDirection: "column", gap: 1.5 }}>
         <Typography sx={{ fontSize: 13, color: dessert.cocoaSoft, px: 0.5 }}>시행일 {EFFECTIVE} · 스마트인포랩</Typography>
         <InfoCard title="한눈에 보기">
-          오늘Do퍼즐은 회원 가입이나 로그인이 없고, 이름·이메일·위치·연락처 같은 개인정보를 모으지 않습니다. 광고 추적이나 사용 분석 도구도 쓰지 않습니다.
+          오늘Do퍼즐은 회원 가입이나 로그인이 없고, 이름·이메일·위치·연락처 같은 개인정보를 모으지 않습니다. 광고 추적이나 외부 분석 도구도 쓰지 않습니다. 앱을 낫게 하려고 누구인지 알 수 없는 사용 횟수만 받습니다(아래 '익명 사용 통계').
         </InfoCard>
         <InfoCard title="이 기기에만 저장하는 것">
           푼 레벨, 별, 시간 기록, 연속 출석, 풀던 판, 설정(입력 방식·소리·진동 등)은 이 기기 안에만 저장합니다. 서버로 보내지 않으며, 앱을 지우면 함께 지워집니다.
+        </InfoCard>
+        <InfoCard title="익명 사용 통계">
+          어떤 퍼즐을 많이 하는지 알기 위해 날짜별 횟수만 스마트인포랩 서버로 보냅니다: 그날 앱을 열었는지, 처음 연 기기인지, 퍼즐·난이도별로 새 판을 시작하거나 다 푼 횟수, 오늘의 퍼즐을 푼 횟수, 웹·iOS·Android 구분. 기기 ID·광고 ID·계정·위치는 보내지 않고, 서버는 받은 숫자를 날짜별로 더해 합계만 남깁니다(접속 IP는 지나친 호출을 막는 데만 잠깐 쓰고 저장하지 않음). 다른 회사에 주거나 광고에 쓰지 않습니다. 설정 › '익명 사용 통계 보내기'를 끄면 더 보내지 않고 기기에 쌓인 횟수도 지웁니다.
         </InfoCard>
         <InfoCard title="공유하기">
           오늘의 퍼즐 결과를 공유하면 휴대폰의 공유 창으로 결과 글과 그림을 보냅니다. 무엇을 누구에게 보낼지는 직접 고르고, 앱은 그 내용을 따로 보관하지 않습니다. 결과에는 답이 들어가지 않습니다.
