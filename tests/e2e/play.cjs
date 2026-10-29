@@ -104,6 +104,8 @@ const shots = process.argv[2];
   assert.match(usage[0].url, /\/api\/usage\/ONEULDOPUZZLE$/);
   assert.equal(usage[0].body.platform, "web");
   assert.deepEqual(usage[0].body.reports[0].counts, { active: 1, new: 1 });
+  // 내릴 때 보내기는 직전 전송 뒤 10초가 지나야 하므로(USAGE_HIDE_MS), 빠른 기기에서는 그만큼 기다린다.
+  await page.waitForFunction(() => Date.now() - JSON.parse(localStorage.getItem("oneuldopuzzle-usage") || "{}").lastSentAt > 10_000, null, { timeout: 15_000, polling: 500 });
   await page.evaluate(() => {
     Object.defineProperty(document, "visibilityState", { value: "hidden", configurable: true });
     document.dispatchEvent(new Event("visibilitychange"));
