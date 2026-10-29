@@ -13,7 +13,14 @@ const shots = process.argv[2];
   const errors = [];
   page.on("pageerror", (e) => errors.push(String(e)));
   // 하는 법(처음 열 때 저절로 뜸)은 따로 확인하고, 여기서는 이미 본 것으로 둡니다.
+  // 익명 사용 통계: 운영 주소로 가지 않게 가로채서 보낸 내용만 본다(자동 브라우저는 원래 세지 않아 __usageTest로 켬).
+  const usage = [];
+  await page.route("**/api/usage/**", (route) => {
+    usage.push({ url: route.request().url(), body: route.request().postDataJSON() });
+    return route.fulfill({ status: 204 });
+  });
   await page.addInitScript(() => {
+    window.__usageTest = true;
     if (!localStorage.getItem("oneuldopuzzle-guide-seen")) localStorage.setItem("oneuldopuzzle-guide-seen", JSON.stringify(["sudoku", "zones", "nonogram", "escape", "sliding", "blocks"]));
   });
 
@@ -93,6 +100,22 @@ const shots = process.argv[2];
   await page.getByText("레벨 2").first().waitFor();
   if (shots) await page.screenshot({ path: `${shots}/5-level2.png` });
 
+  // 익명 사용 통계: 처음 열 때 active·new를 바로 보내고, 내릴 때 새 판 시작·완성을 보낸다(이어 하기는 세지 않음)
+  assert.match(usage[0].url, /\/api\/usage\/ONEULDOPUZZLE$/);
+  assert.equal(usage[0].body.platform, "web");
+  assert.deepEqual(usage[0].body.reports[0].counts, { active: 1, new: 1 });
+  await page.evaluate(() => {
+    Object.defineProperty(document, "visibilityState", { value: "hidden", configurable: true });
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  await page.waitForFunction(() => !JSON.parse(localStorage.getItem("oneuldopuzzle-usage") || "{}").days?.[Object.keys(JSON.parse(localStorage.getItem("oneuldopuzzle-usage") || "{}").days || {})[0]]);
+  const sent = usage.slice(1).flatMap((u) => u.body.reports).reduce((m, r) => { for (const [k, v] of Object.entries(r.counts)) m[k] = (m[k] || 0) + v; return m; }, {});
+  // 어려움 판은 두 번 열었지만 한 번만, 쉬움은 시작·완성, 레벨 2 시작
+  assert.deepEqual(sent, { "start:sudoku:hard": 1, "start:sudoku:easy": 2, "clear:sudoku:easy": 1 });
+  await page.evaluate(() => {
+    Object.defineProperty(document, "visibilityState", { value: "visible", configurable: true });
+  });
+
   // 기록표에 방금 푼 판의 별이 올라간다
   await page.goto(`${BASE}/records`);
   await page.getByRole("heading", { name: "기록표" }).waitFor();
@@ -110,6 +133,10 @@ const shots = process.argv[2];
   await page.goto(`${BASE}/settings`);
   await page.getByRole("button", { name: "숫자 먼저 고르기" }).tap();
   if (shots) await page.screenshot({ path: `${shots}/6-settings.png` });
+  // 익명 사용 통계 보내기를 끄면 쌓인 것을 지우고 더 세지 않는다
+  await page.getByLabel("익명 사용 통계 보내기").tap();
+  assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem("oneuldopuzzle-v1")).state.settings.shareUsage), false);
+  assert.equal(await page.evaluate(() => localStorage.getItem("oneuldopuzzle-usage")), null);
   await page.goto(`${BASE}/play`);
   const g2 = await page.evaluate(() => JSON.parse(localStorage.getItem("oneuldopuzzle-v1")).state.game);
   assert.equal(g2.level, 2);
@@ -118,6 +145,7 @@ const shots = process.argv[2];
   await page.getByRole("gridcell").nth(e2).tap();
   const after = await page.evaluate(() => JSON.parse(localStorage.getItem("oneuldopuzzle-v1")).state.game);
   assert.equal(after.values[e2], g2.solution[e2]);
+  assert.equal(await page.evaluate(() => localStorage.getItem("oneuldopuzzle-usage")), null, "끈 뒤에는 세지 않음");
 
   assert.deepEqual(errors, []);
   await browser.close();

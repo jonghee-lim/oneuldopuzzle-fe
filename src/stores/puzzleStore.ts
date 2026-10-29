@@ -18,6 +18,7 @@ import { newNonogramGame, type NonogramGame } from "../puzzle/nonogram/game";
 import { zonesForLevel } from "../puzzle/zones/generator";
 import { DEFAULT_TIER, type Tier, type TierPuzzle } from "../puzzle/core/tier";
 import { newZoneGame, type ZoneGame } from "../puzzle/zones/game";
+import { trackClear, trackDaily, trackStart } from "../platform/usage";
 
 export interface PuzzleSettings {
   inputMode: InputMode;
@@ -31,6 +32,8 @@ export interface PuzzleSettings {
   haptics: boolean;
   /** 색깔 구역: 마카롱이 못 가는 칸을 흐린 X로 자동 표시(기본 켜짐) */
   autoCross: boolean;
+  /** 익명 사용 통계 보내기(기본 켜짐, 2026-10-29). 끄면 세지도 보내지도 않습니다. */
+  shareUsage: boolean;
 }
 
 /** 점수표 한 줄: 퍼즐 종류별로 푼 수·가장 빠른 시간·합계 시간 */
@@ -176,6 +179,7 @@ export const usePuzzleStore = create<PuzzleState>()(
           const reward = dailyHintReward(done.length, total);
           const dailyDone = [...done, kind];
           const allDone = dailyDone.length === total;
+          trackDaily(kind, allDone);
           set({
             [slot]: game,
             dailyDone,
@@ -199,7 +203,9 @@ export const usePuzzleStore = create<PuzzleState>()(
         if (current && !done(current)) paused[current.tier ?? DEFAULT_TIER] = current;
         const kept = paused[tier];
         delete paused[tier];
-        const game = kept && kept.level === level && !done(kept) ? kept : { ...make(level, tier), tier };
+        const resumed = !!kept && kept.level === level && !done(kept);
+        const game = resumed ? kept : { ...make(level, tier), tier };
+        if (!resumed) trackStart(puzzle, tier);
         set({ [slot]: game, tierPaused: { ...get().tierPaused, [puzzle]: paused } } as Partial<PuzzleState>);
         return game;
       }
@@ -213,6 +219,7 @@ export const usePuzzleStore = create<PuzzleState>()(
         if (done(game) && !done(before)) {
           const tier = game.tier ?? DEFAULT_TIER;
           const cleared = get().tierCleared[puzzle] ?? {};
+          trackClear(puzzle, tier);
           set({
             [slot]: game,
             tierCleared: { ...get().tierCleared, [puzzle]: { ...cleared, [tier]: Math.max(cleared[tier] ?? 0, game.level) } },
@@ -226,7 +233,7 @@ export const usePuzzleStore = create<PuzzleState>()(
       return {
       sudokuCleared: {},
       bestSeconds: {},
-      settings: { inputMode: "cell-first", highlightSame: true, showConflicts: true, sound: true, haptics: true, autoCross: true },
+      settings: { inputMode: "cell-first", highlightSame: true, showConflicts: true, sound: true, haptics: true, autoCross: true, shareUsage: true },
       game: null,
       paused: {},
       chosenDifficulty: null,
@@ -265,6 +272,7 @@ export const usePuzzleStore = create<PuzzleState>()(
         }
         const p = puzzleForLevel(level, difficulty);
         const game = newGame({ id: p.id, level, difficulty: p.difficulty, puzzle: p.puzzle, solution: p.solution });
+        trackStart("sudoku", game.difficulty);
         set({ game, paused });
         return game;
       },
@@ -277,6 +285,7 @@ export const usePuzzleStore = create<PuzzleState>()(
           const key = `${game.difficulty}:${game.level}`;
           const best = get().bestSeconds[key];
           const lines = sudokuStars(game.difficulty, game.elapsedSeconds, !!game.usedCheck || !!game.usedHint);
+          trackClear("sudoku", game.difficulty);
           set({
             ...gainStars(get(), starKey.sudoku(game.difficulty, game.level), lines),
             game,

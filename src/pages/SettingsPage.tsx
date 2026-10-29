@@ -4,6 +4,7 @@ import { Box, ButtonBase, IconButton, Switch, ToggleButton, ToggleButtonGroup, T
 import type { ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Page from "../components/layout/Page";
+import { clearUsage } from "../platform/usage";
 import { usePuzzleStore } from "../stores/puzzleStore";
 import { dessert } from "../theme/palette";
 import { radius } from "../theme/shape";
@@ -52,6 +53,19 @@ export default function SettingsPage() {
           <Row label="효과음" checked={settings.sound} onChange={(v) => updateSettings({ sound: v })} />
           <Row label="진동" checked={settings.haptics} onChange={(v) => updateSettings({ haptics: v })} divider />
           <Typography sx={{ px: 2, pb: 1.5, fontSize: 13, color: "text.secondary" }}>진동은 지원하는 기기에서만 울립니다.</Typography>
+        </Group>
+        <Group title="통계">
+          <Row
+            label="익명 사용 통계 보내기"
+            checked={settings.shareUsage}
+            onChange={(v) => {
+              updateSettings({ shareUsage: v });
+              if (!v) clearUsage();
+            }}
+          />
+          <Typography sx={{ px: 2, pb: 1.5, fontSize: 13, color: "text.secondary" }}>
+            어떤 퍼즐을 많이 하는지 날짜별 횟수만 보냅니다. 기기나 사람을 알아볼 정보는 보내지 않아요.
+          </Typography>
         </Group>
         <Group title="정보">
           <LinkRow label="이용안내" to="/guide" />
